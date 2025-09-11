@@ -2,7 +2,7 @@
 Program that uses native Linux tools to automatically roam and gather metrics between multiple APs
 
 ## Requirements:
-Linux box with a Wi-Fi radio associated to an SSID. The program relies on wpa_supplicant and wpa_cli.
+Linux box with a Wi-Fi radio associated to an SSID. The program relies on wpa_supplicant and wpa_cli. If you run this in a VM, make sure the VM has access to the Wi-Fi hardware.
 
 ## Usage example:
 ```python3 wlan-autoroam-cli.py -i wlan0 -t -75```
