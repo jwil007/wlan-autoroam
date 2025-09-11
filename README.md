@@ -1,5 +1,5 @@
 # wlan-autoroam-cli
-Program that uses native Linux tools to automatically roam and gather metrics between multiple APs.
+This is a Python script that uses native Linux tools to automatically roam and gather metrics between multiple APs.
 
 This works by using wpa_cli to initiate a scan and build a list of BSSIDs for the same ESS (SSID) you are associated to. It will then filter for a minimum RSSI. After building the list, it uses the wpa_cli roam command to iterate though each BSSID found, and will lastly roam back to the origin BSSID. Roaming time is measured by parsing wpa_supplicant logs. Relevent logs will be printed inline and color coded to improve legibility.
 
