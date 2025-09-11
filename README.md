@@ -5,7 +5,7 @@ Program that uses native Linux tools to automatically roam and gather metrics be
 Linux box with a Wi-Fi radio associated to an SSID. The program relies on wpa_supplicant and wpa_cli.
 
 ## Usage example:
-```python3 roam_test.py -i wlan0 -t -75```
+```python3 wlan-autoroam-cli.py -i wlan0 -t -75```
 
 ## Optional params:
 ```-i``` : Specifies Wi-Fi interface name. Default is ```wlan0```
