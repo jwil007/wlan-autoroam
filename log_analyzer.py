@@ -57,7 +57,7 @@ def split_into_roams(logs: list[str]) -> list[list[str]]:
     chunks: list[list[str]] = []
     current_chunk: list[str] = []
 
-    start_marker = "Control interface command 'ROAM"
+    start_marker = "CTRL_IFACE ROAM"
 
     for line in logs:
         if start_marker in line:
