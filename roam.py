@@ -1,6 +1,8 @@
 import wpa_cli_wrapper as wpa_cli
 from dataclasses import dataclass
 from time import sleep
+import time
+from log_collector import CollectedLogs
 
 @dataclass
 class RoamResults:
@@ -8,7 +10,25 @@ class RoamResults:
     roam_time_ms: float | None = None
 
 
-def start_roam_seq(iface: str, mrssi: int = -75) -> list[RoamResults]:
+def wait_for_roam(collected: CollectedLogs, target_bssid: str, start_index: int, timeout: float = 10.0) -> bool:
+    start = time.time()
+    while time.time() - start < timeout:
+        new_logs = collected.raw_logs[start_index:]
+        for line in new_logs:
+            if "CTRL-EVENT-CONNECTED" in line:
+                if target_bssid in line:
+                    print("Roam succeeded:", target_bssid)
+                    return True
+                else:
+                    print("Connected, but not target BSSID:", line.strip())
+                    return True  # still counts as a roam
+        time.sleep(0.2)
+    return False
+
+
+
+
+def start_roam_seq(iface: str, collected: CollectedLogs, mrssi: int = -75) -> list[RoamResults]:
     results: list[RoamResults] = []
     #get current connection SSID and BSSID
     current_connection = wpa_cli.get_current_connection(iface)
@@ -29,13 +49,11 @@ def start_roam_seq(iface: str, mrssi: int = -75) -> list[RoamResults]:
     
     #roam to each BSSID in candidate list
     for target in candidate_list:
-        print("Roaming to",target.bssid,
-              "RSSI:",target.rssi,"dBm",
-              "Frequency:",target.freq,"MHz")
-        wpa_cli.roam_to_bssid(iface=iface,
-                              bssid=target.bssid)
-        sleep(2)
+        print("Roaming to", target.bssid)
+        start_index = len(collected.raw_logs)
+        wpa_cli.roam_to_bssid(iface=iface, bssid=target.bssid)
 
-
-
-start_roam_seq("wlan0")
+        if wait_for_roam(collected, target.bssid, start_index):
+            print("Roam to", target.bssid, "completed")
+        else:
+            print("Roam to", target.bssid, "timed out or failed")

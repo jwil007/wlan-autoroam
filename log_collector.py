@@ -31,3 +31,4 @@ def collect_logs(results: CollectedLogs):
 def stop_log_collection(proc: subprocess.Popen):
     proc.terminate()
     proc.wait()
+    print("stopped")

@@ -24,11 +24,29 @@ class LogAnalysisDerived:
     eap_success_time: datetime | None = None
     eap_failure_time: datetime | None = None
     roam_duration_ms: float | None = None
-    eap_time_ms: float | None = None 
+    eap_duration_ms: float | None = None 
 
+def pretty_print_derived(derived: LogAnalysisDerived) -> str:
+    def fmt(val, fmt_str="{:.2f}"):
+        if val is None:
+            return "N/A"
+        if isinstance(val, float):
+            return fmt_str.format(val)
+        return str(val)
 
-with open("sample_results.pkl", "rb") as f:
-    test_data: CollectedLogs = pickle.load(f)
+    return (
+        f"\n--- Roam Analysis ---\n"
+        f"Target BSSID:   {fmt(derived.roam_target_bssid)}\n"
+        f"Final BSSID:    {fmt(derived.roam_final_bssid)}\n"
+        f"Roam Start:     {fmt(derived.roam_start_time)}\n"
+        f"Roam End:       {fmt(derived.roam_end_time)}\n"
+        f"EAP Start:      {fmt(derived.eap_start_time)}\n"
+        f"EAP Success:    {fmt(derived.eap_success_time)}\n"
+        f"EAP Failure:    {fmt(derived.eap_failure_time)}\n"
+        f"Roam Duration:  {fmt(derived.roam_duration_ms)} ms\n"
+        f"EAP Duration:   {fmt(derived.eap_duration_ms)} ms\n"
+        f"----------------------\n"
+    )
 
 def split_into_roams(logs: list[str]) -> list[list[str]]:
     """
@@ -126,7 +144,6 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
             raw.other_logs.append(line)    
     return raw
 
-
 def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
     derived = LogAnalysisDerived()
     #Get start/end times
@@ -145,27 +162,50 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
             f"{year} {ts}", "%Y %b %d %H:%M:%S.%f"
         )
     if raw.eap_start_logs:
-        ts = raw.eap_start_logs[-1][:22]
+        ts = raw.eap_start_logs[0][:22]
         derived.eap_start_time = datetime.strptime(
             f"{year} {ts}", "%Y %b %d %H:%M:%S.%f"
         )
 
     if raw.eap_success_logs:
-        ts = raw.eap_start_logs[-1][:22]
+        ts = raw.eap_success_logs[0][:22]
         derived.eap_success_time = datetime.strptime(
             f"{year} {ts}", "%Y %b %d %H:%M:%S.%f"
         )
 
-    #calculate duration
+    if raw.eap_failure_logs:
+        ts = raw.eap_failure_logs[0][:22]
+        derived.eap_failure_time = datetime.strptime(
+            f"{year} {ts}", "%Y %b %d %H:%M:%S.%f"
+        )    
+
+    #calculate roam duration
     if derived.roam_start_time and derived.roam_end_time:
         duration = derived.roam_end_time - derived.roam_start_time
         derived.roam_duration_ms = duration.total_seconds() * 1000
-        print(derived.roam_duration_ms)
 
+    # --- EAP duration ---
+    if raw.eap_start_logs:
+        start_ts = raw.eap_start_logs[0][:22]
+        eap_start_time = datetime.strptime(f"{year} {start_ts}", "%Y %b %d %H:%M:%S.%f")
+        derived.eap_start_time = eap_start_time
 
+        # Prefer success, otherwise failure
+        if raw.eap_success_logs:
+            end_ts = raw.eap_success_logs[0][:22]
+            eap_end_time = datetime.strptime(f"{year} {end_ts}", "%Y %b %d %H:%M:%S.%f")
+            derived.eap_success_time = eap_end_time
+        elif raw.eap_failure_logs:
+            end_ts = raw.eap_failure_logs[0][:22]
+            eap_end_time = datetime.strptime(f"{year} {end_ts}", "%Y %b %d %H:%M:%S.%f")
+            derived.eap_failure_time = eap_end_time
+        else:
+            eap_end_time = None
 
+        if eap_start_time and eap_end_time:
+            derived.eap_duration_ms = (eap_end_time - eap_start_time).total_seconds() * 1000
 
-
+    return derived
 
 def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
     """
@@ -181,5 +221,4 @@ def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
 
     return results
 
-analyze_all_roams(test_data)
 
