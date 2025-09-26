@@ -1,13 +1,16 @@
 from log_collector import CollectedLogs
-import pickle
 from datetime import datetime
 from dataclasses import dataclass, field
+import re
 
 @dataclass
 class LogAnalysisRaw:
     iface_control_start: str | None = None
     roam_start_log: str | None = None
     roam_end_log: str | None = None
+    key_mgmt_log: str | None = None
+    fourway_start_log: str | None = None
+    fourway_success_log: str | None = None
     ft_success_logs: list[str] = field(default_factory=list)
     eap_start_logs: list[str] = field(default_factory=list)
     eap_success_logs: list[str] = field(default_factory=list)
@@ -15,16 +18,22 @@ class LogAnalysisRaw:
     disconnect_logs: list[str] = field(default_factory=list)
     other_logs: list[str] = field(default_factory=list)
 
+@dataclass
 class LogAnalysisDerived:
     roam_target_bssid: str | None = None
     roam_final_bssid: str | None = None
     roam_start_time: datetime | None = None
     roam_end_time: datetime | None = None
+    wpa_params: str | None = None
+    fourway_start_time: datetime | None = None
+    fourway_success_time: datetime | None = None
+    fourway_duration_ms: float | None = None
     eap_start_time: datetime | None = None
     eap_success_time: datetime | None = None
     eap_failure_time: datetime | None = None
     roam_duration_ms: float | None = None
     eap_duration_ms: float | None = None 
+    key_mgmt : str | None = None
 
 def pretty_print_derived(derived: LogAnalysisDerived) -> str:
     def fmt(val, fmt_str="{:.2f}"):
@@ -38,8 +47,12 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"\n--- Roam Analysis ---\n"
         f"Target BSSID:   {fmt(derived.roam_target_bssid)}\n"
         f"Final BSSID:    {fmt(derived.roam_final_bssid)}\n"
+        f"Key mgmt:       {fmt(derived.key_mgmt)}\n"
         f"Roam Start:     {fmt(derived.roam_start_time)}\n"
         f"Roam End:       {fmt(derived.roam_end_time)}\n"
+        f"4way start:     {fmt(derived.fourway_start_time)}\n"
+        f"4way success:   {fmt(derived.fourway_success_time)}\n"
+        f"4way duration:  {fmt(derived.fourway_duration_ms)} ms\n"
         f"EAP Start:      {fmt(derived.eap_start_time)}\n"
         f"EAP Success:    {fmt(derived.eap_success_time)}\n"
         f"EAP Failure:    {fmt(derived.eap_failure_time)}\n"
@@ -76,113 +89,88 @@ def split_into_roams(logs: list[str]) -> list[list[str]]:
 
     return chunks
 
+#matches raw logs
 def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
-    #String matches for each log type to grab.
-    #if multiple markers in list, code will match in order
-    iface_cmd_markers = [
-    "Control interface command 'ROAM",
-    ]
-    roam_start_markers = [
-    "State: COMPLETED -> AUTHENTICATING",
-    ]
-    roam_end_markers = [
-    "CTRL-EVENT-CONNECTED",
-    ]
-    ft_success_markers = [
-    "FT: Completed successfully",
-    ]
-    eap_start_markers = [
-    "CTRL-EVENT-EAP-START",
-    ]
-    eap_success_markers = [
-    "CTRL-EVENT-EAP-SUCCESS",
-    ]
-    eap_failure_markers = [
-    "CTRL-EVENT-EAP-FAILURE",
-    ]
-    disconnect_markers = [
-    "State: ASSOCIATING -> DISCONNECTED",
-    ]
+    # key = attribute name on LogAnalysisRaw
+    # value = (list of markers, allow_multiple flag)
+    LOG_MARKERS: dict[str, tuple[list[str], bool]] = {
+        "iface_control_start": (["CTRL_IFACE ROAM"], False),
+        "roam_start_log":      (["State: COMPLETED -> AUTHENTICATING"], False),
+        "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
+        "ft_success_logs":     (["FT: Completed successfully"], True),
+        "eap_start_logs":      (["CTRL-EVENT-EAP-START"], True),
+        "eap_success_logs":    (["CTRL-EVENT-EAP-SUCCESS"], True),
+        "eap_failure_logs":    (["CTRL-EVENT-EAP-FAILURE"], True),
+        "disconnect_logs":     (["State: ASSOCIATING -> DISCONNECTED"], True),
+        "key_mgmt_log":        (["WPA: using KEY_MGMT"], False),
+        "fourway_start_log":   (["WPA: RX message 1 of 4-Way Handshake"], False),
+        "fourway_success_log": (["WPA: Key negotiation completed"], False),
+
+    }
+
     raw = LogAnalysisRaw()
+
     for line in logs:
-        if any(marker in line for marker in iface_cmd_markers):
-            for marker in iface_cmd_markers:
+        matched = False
+        for attr, (markers, allow_multiple) in LOG_MARKERS.items():
+            for marker in markers:   # preserve order
                 if marker in line:
-                    raw.iface_control_start = line
-                    break
-        elif any(marker in line for marker in roam_start_markers):
-            for marker in roam_start_markers:
-                if marker in line:
-                    raw.roam_start_log = line
-                    break
-        elif any(marker in line for marker in roam_end_markers):
-            for marker in roam_end_markers:
-                if marker in line:
-                    raw.roam_end_log = line
-                    break
-        elif any(marker in line for marker in ft_success_markers):
-            for marker in ft_success_markers:
-                if marker in line:
-                    raw.ft_success_logs.append(line)
-        elif any(marker in line for marker in eap_start_markers):
-            for marker in eap_start_markers:
-                if marker in line:
-                    raw.eap_start_logs.append(line)
-        elif any(marker in line for marker in eap_success_markers):
-            for marker in eap_success_markers:
-                if marker in line:
-                    raw.eap_success_logs.append(line)
-        elif any(marker in line for marker in eap_failure_markers):
-            for marker in eap_failure_markers:
-                if marker in line:
-                    raw.eap_failure_logs.append(line)
-        elif any(marker in line for marker in disconnect_markers):
-            for marker in disconnect_markers:
-                if marker in line:
-                    raw.disconnect_logs.append(line)
-        elif raw:
-            raw.other_logs.append(line)    
+                    if allow_multiple:
+                        getattr(raw, attr).append(line)
+                    else:
+                        setattr(raw, attr, line)
+                    matched = True
+                    break   # stop checking further markers for this attribute
+            if matched:
+                break  # stop checking other attributes for this line
     return raw
 
+#Helper to extract timestamp
+def parse_ts_from_line(line: str, year: int) -> datetime | None:
+    try:
+        ts = line[:22]
+        return datetime.strptime(f"{year} {ts}", "%Y %b %d %H:%M:%S.%f")
+    except Exception:
+        return None
+    
+#helper with regex to extract MAC addresses
+def extract_mac(line: str) -> str | None:
+    match = re.search(r"([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})", line)
+    if match:
+        return match.group(1)
+    return None
+
+#parses select raw log lines into metrics, and does operations for stuff like time duration
 def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
     derived = LogAnalysisDerived()
-    #Get start/end times
     year = datetime.now().year
-    if raw.roam_start_log:
-        ts = raw.roam_start_log[:22]  # trim to timestamp part
-        year = datetime.now().year
-        derived.roam_start_time = datetime.strptime(
-            f"{year} {ts}", "%Y %b %d %H:%M:%S.%f"
-        )
 
-    if raw.roam_end_log:
-        ts = raw.roam_end_log[:22]
-        year = datetime.now().year
-        derived.roam_end_time = datetime.strptime(
-            f"{year} {ts}", "%Y %b %d %H:%M:%S.%f"
-        )
-    if raw.eap_start_logs:
-        ts = raw.eap_start_logs[0][:22]
-        derived.eap_start_time = datetime.strptime(
-            f"{year} {ts}", "%Y %b %d %H:%M:%S.%f"
-        )
+    TIMESTAMP_FIELDS: dict[str, tuple[str, bool]] = {
+        "roam_start_time":     ("roam_start_log", False),
+        "roam_end_time":       ("roam_end_log", False),
+        "fourway_start_time":  ("fourway_start_log", False),
+        "fourway_success_time":("fourway_success_log", False),
+        "eap_start_time":      ("eap_start_logs", True),
+        "eap_success_time":    ("eap_success_logs", True),
+        "eap_failure_time":    ("eap_failure_logs", True),
+    }
 
-    if raw.eap_success_logs:
-        ts = raw.eap_success_logs[0][:22]
-        derived.eap_success_time = datetime.strptime(
-            f"{year} {ts}", "%Y %b %d %H:%M:%S.%f"
-        )
+    for derived_attr, (raw_attr, is_list) in TIMESTAMP_FIELDS.items():
+        value = getattr(raw, raw_attr)
+        if not value:
+            continue
+        if is_list:
+            value = value[0]  # take the first log line
+        setattr(derived, derived_attr, parse_ts_from_line(value, year))
 
-    if raw.eap_failure_logs:
-        ts = raw.eap_failure_logs[0][:22]
-        derived.eap_failure_time = datetime.strptime(
-            f"{year} {ts}", "%Y %b %d %H:%M:%S.%f"
-        )    
-
-    #calculate roam duration
+    #durations
     if derived.roam_start_time and derived.roam_end_time:
         duration = derived.roam_end_time - derived.roam_start_time
         derived.roam_duration_ms = duration.total_seconds() * 1000
+
+    if derived.fourway_start_time and derived.fourway_success_time:
+        duration = derived.fourway_success_time - derived.fourway_start_time
+        derived.fourway_duration_ms = duration.total_seconds() * 1000
 
     # --- EAP duration ---
     if raw.eap_start_logs:
@@ -204,6 +192,17 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
 
         if eap_start_time and eap_end_time:
             derived.eap_duration_ms = (eap_end_time - eap_start_time).total_seconds() * 1000
+
+    #Get MACs for target and final BSSID
+    if raw.iface_control_start:
+        derived.roam_target_bssid = extract_mac(raw.iface_control_start)
+
+    if raw.roam_end_log:
+        derived.roam_final_bssid = extract_mac(raw.roam_end_log)
+
+    #Get Key mgmt string
+    if raw.key_mgmt_log:
+        derived.key_mgmt = raw.key_mgmt_log.split()[-1]
 
     return derived
 
