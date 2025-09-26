@@ -253,7 +253,6 @@ def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
 
     for chunk in chunks:
         raw = find_raw_logs(chunk)
-        print(raw.freq_log)
         derived = derive_metrics(raw)
         results.append(derived)
 

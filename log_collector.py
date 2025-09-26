@@ -1,8 +1,6 @@
 import subprocess
 from dataclasses import dataclass,field
 import threading
-from time import sleep
-import pickle
 
 @dataclass
 class CollectedLogs:
