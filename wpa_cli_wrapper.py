@@ -22,6 +22,50 @@ class ParsedScanResults:
     flags: str | None = None
     ssid: str | None = None
 
+#Set log level DEBUG - needed for log parsing.
+def set_log_level(iface: str, level = str) -> tuple[bool, str | None]:
+    #check current log level
+    current_log_level = subprocess.run(
+        ["wpa_cli","-i",iface,"log_level"],
+                capture_output = True,
+                text = True,
+                check = True
+    )
+    for line in current_log_level.stdout.splitlines():
+        if line.startswith("Current level:"):
+            original_log_level = line.split(":")[1].strip()
+            print("Log level currently set to",original_log_level)
+            if original_log_level == level:
+                print ("log level already set correctly")
+                return True, original_log_level
+            else:
+                try:
+                    result = subprocess.run(
+                        ["wpa_cli","-i",iface,"log_level",level],
+                        capture_output = True,
+                        text = True,
+                        check = True
+                    )
+                    print("changing log level to",level,result.stdout)
+                    return True, original_log_level
+                except subprocess.CalledProcessError as e:
+                    print(f"Failed to set log level: {e.stderr.strip()}")
+                    return False, original_log_level
+            
+def restore_log_level(iface = str, original_log_level = str) -> bool:
+    try:    
+        r = subprocess.run(
+            ["wpa_cli","-i",iface,"log_level",original_log_level],
+            capture_output = True,
+            text = True,
+            check = True
+        )
+        print("returned log level to original value:",original_log_level,r.stdout)
+        return (True)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to set log level: {e.stderr.strip()}")
+        return False
+
 #Uses wpa_cli status to find current connection stats
 def get_current_connection(iface: str = interface) -> CurrentConnectionInfo:
     r = subprocess.run(["wpa_cli","-i",iface,"status"],
@@ -82,5 +126,3 @@ def get_scan_results(
 def roam_to_bssid(iface: str, bssid: str) -> None:
     subprocess.run(["wpa_cli", "-i", iface, "roam", bssid],
                    capture_output=True, text=True)
-
-
