@@ -95,7 +95,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
     # value = (list of markers, allow_multiple flag)
     LOG_MARKERS: dict[str, tuple[list[str], bool]] = {
         "iface_control_start": (["CTRL_IFACE ROAM"], False),
-        "roam_start_log":      (["State: COMPLETED -> AUTHENTICATING","CTRL_IFACE ROAM"], False),
+        "roam_start_log":      (["State: COMPLETED -> AUTHENTICATING","Request association with","CTRL_IFACE ROAM"], False),
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
         "ft_success_logs":     (["FT: Completed successfully"], True),
         "eap_start_logs":      (["CTRL-EVENT-EAP-START"], True),
