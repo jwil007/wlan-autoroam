@@ -38,6 +38,9 @@ class LogAnalysisDerived:
     eap_duration_ms: float | None = None 
     key_mgmt : str | None = None
     pmksa_cache_used: bool | None = None
+    disconnect_count: int | None = None
+    disconnect_bool: bool | None = None
+    ft_success: bool | None = None
 
 def pretty_print_derived(derived: LogAnalysisDerived) -> str:
     def fmt(val, fmt_str="{:.2f}"):
@@ -58,12 +61,15 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"4way start:     {fmt(derived.fourway_start_time)}\n"
         f"4way success:   {fmt(derived.fourway_success_time)}\n"
         f"4way duration:  {fmt(derived.fourway_duration_ms)} ms\n"
+        f"FT Used:        {fmt(derived.ft_success)}\n"
         f"EAP Start:      {fmt(derived.eap_start_time)}\n"
         f"EAP Success:    {fmt(derived.eap_success_time)}\n"
         f"EAP Failure:    {fmt(derived.eap_failure_time)}\n"
         f"PMK Cache Used: {fmt(derived.pmksa_cache_used)}\n"
-        f"Roam Duration:  {fmt(derived.roam_duration_ms)} ms\n"
         f"EAP Duration:   {fmt(derived.eap_duration_ms)} ms\n"
+        f"Disconnect:     {fmt(derived.disconnect_bool)}\n"
+        f"Disconnect cnt: {fmt(derived.disconnect_count)}\n"
+        f"Roam Duration:  {fmt(derived.roam_duration_ms)} ms\n"
         f"----------------------\n"
     )
 
@@ -107,7 +113,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "eap_start_logs":      (["CTRL-EVENT-EAP-START"], True),
         "eap_success_logs":    (["CTRL-EVENT-EAP-SUCCESS"], True),
         "eap_failure_logs":    (["CTRL-EVENT-EAP-FAILURE"], True),
-        "disconnect_logs":     (["State: ASSOCIATING -> DISCONNECTED"], True),
+        "disconnect_logs":     (["State: ASSOCIATING -> DISCONNECTED","-> DISCONNECTED",], True),
         "key_mgmt_log":        (["WPA: using KEY_MGMT","RSN: using KEY_MGMT"], False),
         "fourway_start_log":   (["WPA: RX message 1 of 4-Way Handshake"], False),
         "fourway_success_log": (["WPA: Key negotiation completed"], False),
@@ -221,6 +227,20 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
     #Get final freq
     if raw.freq_log:
         derived.final_freq = raw.freq_log.split()[-2]
+
+    #Disconnects
+    if raw.disconnect_logs:
+        derived.disconnect_bool = True
+        derived.disconnect_count = len(raw.disconnect_logs)
+    else:
+        derived.disconnect_bool = False
+
+    #FT Success
+    if raw.ft_success_logs:
+        derived.ft_success = True
+    else:
+        derived.ft_success = False
+
 
     return derived
 
