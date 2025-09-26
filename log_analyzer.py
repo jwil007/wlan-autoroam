@@ -206,7 +206,7 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
 
     #Get Key mgmt string
     if raw.key_mgmt_log:
-        derived.key_mgmt = raw.key_mgmt_log.split()[-1]
+        derived.key_mgmt = raw.key_mgmt_log.split("KEY_MGMT", 1)[1].strip()
 
     #Check PMK Cache
     if raw.pmksa_cache_used_log:
