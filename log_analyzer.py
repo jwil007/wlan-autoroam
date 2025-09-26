@@ -16,6 +16,7 @@ class LogAnalysisRaw:
     eap_success_logs: list[str] = field(default_factory=list)
     eap_failure_logs: list[str] = field(default_factory=list)
     disconnect_logs: list[str] = field(default_factory=list)
+    pmksa_cache_used_log: str | None = None
     other_logs: list[str] = field(default_factory=list)
 
 @dataclass
@@ -34,6 +35,7 @@ class LogAnalysisDerived:
     roam_duration_ms: float | None = None
     eap_duration_ms: float | None = None 
     key_mgmt : str | None = None
+    pmksa_cache_used: bool | None = None
 
 def pretty_print_derived(derived: LogAnalysisDerived) -> str:
     def fmt(val, fmt_str="{:.2f}"):
@@ -56,6 +58,7 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"EAP Start:      {fmt(derived.eap_start_time)}\n"
         f"EAP Success:    {fmt(derived.eap_success_time)}\n"
         f"EAP Failure:    {fmt(derived.eap_failure_time)}\n"
+        f"PMK Cache Used: {fmt(derived.pmksa_cache_used)}\n"
         f"Roam Duration:  {fmt(derived.roam_duration_ms)} ms\n"
         f"EAP Duration:   {fmt(derived.eap_duration_ms)} ms\n"
         f"----------------------\n"
@@ -102,9 +105,10 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "eap_success_logs":    (["CTRL-EVENT-EAP-SUCCESS"], True),
         "eap_failure_logs":    (["CTRL-EVENT-EAP-FAILURE"], True),
         "disconnect_logs":     (["State: ASSOCIATING -> DISCONNECTED"], True),
-        "key_mgmt_log":        (["WPA: using KEY_MGMT"], False),
+        "key_mgmt_log":        (["WPA: using KEY_MGMT","RSN: using KEY_MGMT"], False),
         "fourway_start_log":   (["WPA: RX message 1 of 4-Way Handshake"], False),
         "fourway_success_log": (["WPA: Key negotiation completed"], False),
+        "pmksa_cache_used_log":(["PMKSA caching was used"], False)
 
     }
 
@@ -204,6 +208,12 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
     if raw.key_mgmt_log:
         derived.key_mgmt = raw.key_mgmt_log.split()[-1]
 
+    #Check PMK Cache
+    if raw.pmksa_cache_used_log:
+        derived.pmksa_cache_used = True
+    else:
+        derived.pmksa_cache_used = False
+
     return derived
 
 def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
@@ -215,6 +225,7 @@ def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
 
     for chunk in chunks:
         raw = find_raw_logs(chunk)
+        print(raw.key_mgmt_log)
         derived = derive_metrics(raw)
         results.append(derived)
 
