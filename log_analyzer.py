@@ -8,6 +8,7 @@ class LogAnalysisRaw:
     iface_control_start: str | None = None
     roam_start_log: str | None = None
     roam_end_log: str | None = None
+    freq_log: str | None = None
     key_mgmt_log: str | None = None
     fourway_start_log: str | None = None
     fourway_success_log: str | None = None
@@ -23,6 +24,7 @@ class LogAnalysisRaw:
 class LogAnalysisDerived:
     roam_target_bssid: str | None = None
     roam_final_bssid: str | None = None
+    final_freq: int | None = None
     roam_start_time: datetime | None = None
     roam_end_time: datetime | None = None
     wpa_params: str | None = None
@@ -49,6 +51,7 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"\n--- Roam Analysis ---\n"
         f"Target BSSID:   {fmt(derived.roam_target_bssid)}\n"
         f"Final BSSID:    {fmt(derived.roam_final_bssid)}\n"
+        f"Final freq:     {fmt(derived.final_freq)}\n"
         f"Key mgmt:       {fmt(derived.key_mgmt)}\n"
         f"Roam Start:     {fmt(derived.roam_start_time)}\n"
         f"Roam End:       {fmt(derived.roam_end_time)}\n"
@@ -67,16 +70,16 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
 def split_into_roams(logs: list[str]) -> list[list[str]]:
     """
     Split raw logs into per-roam chunks based on the ROAM command.
-    Each chunk starts with 'Control interface command ROAM'
-    and ends just before the next 'ROAM', or EOF if it's the last roam.
+    Each chunk starts with 'CTRL_IFACE ROAM <MAC>'.
     """
     chunks: list[list[str]] = []
     current_chunk: list[str] = []
 
-    start_marker = "CTRL_IFACE ROAM"
+    # Regex: CTRL_IFACE ROAM followed by a MAC address
+    roam_start_re = re.compile(r"CTRL_IFACE ROAM ([0-9a-f]{2}(:[0-9a-f]{2}){5})", re.IGNORECASE)
 
     for line in logs:
-        if start_marker in line:
+        if roam_start_re.search(line):
             # If we already have a chunk, close it before starting a new one
             if current_chunk:
                 chunks.append(current_chunk)
@@ -108,7 +111,8 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "key_mgmt_log":        (["WPA: using KEY_MGMT","RSN: using KEY_MGMT"], False),
         "fourway_start_log":   (["WPA: RX message 1 of 4-Way Handshake"], False),
         "fourway_success_log": (["WPA: Key negotiation completed"], False),
-        "pmksa_cache_used_log":(["PMKSA caching was used"], False)
+        "pmksa_cache_used_log":(["PMKSA caching was used"], False),
+        "freq_log"            :(["Operating frequency changed from"], False),
 
     }
 
@@ -214,6 +218,10 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
     else:
         derived.pmksa_cache_used = False
 
+    #Get final freq
+    if raw.freq_log:
+        derived.final_freq = raw.freq_log.split()[-2]
+
     return derived
 
 def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
@@ -225,7 +233,7 @@ def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
 
     for chunk in chunks:
         raw = find_raw_logs(chunk)
-        print(raw.key_mgmt_log)
+        print(raw.freq_log)
         derived = derive_metrics(raw)
         results.append(derived)
 
