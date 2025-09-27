@@ -1,4 +1,3 @@
-from time import sleep
 import argparse
 import time
 from log_collector import CollectedLogs, collect_logs, stop_log_collection
@@ -24,7 +23,7 @@ def wait_for_connected(collected: CollectedLogs, start_index: int, timeout: floa
 
 def main():
 
-
+    #Definte input params
     parser = argparse.ArgumentParser(description="Wi-Fi Roam Test Tool")
     parser.add_argument("-i", "--iface", default="wlan0", help="Wi-Fi interface to use")
     parser.add_argument("-r", "--rssi", type=int, default=-75, help="Minimum RSSI filter")
@@ -91,6 +90,14 @@ def main():
     finally:
         stop_log_collection(proc)
         restore_log_level(iface, original_log_level)
+    
+    if args.debug:
+            try:
+                with open(args.debug, "w") as f:
+                    f.writelines(collected.raw_logs)
+                print(f"Saved raw logs to {args.debug}")
+            except Exception as e:
+                print(f"Failed to save debug logs: {e}")
 
 
 if __name__ == "__main__":
