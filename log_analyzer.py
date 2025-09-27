@@ -56,15 +56,15 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"Final BSSID:    {fmt(derived.roam_final_bssid)}\n"
         f"Final freq:     {fmt(derived.final_freq)}\n"
         f"Key mgmt:       {fmt(derived.key_mgmt)}\n"
-        f"4way start:     {fmt(derived.fourway_start_time)}\n"
-        f"4way success:   {fmt(derived.fourway_success_time)}\n"
-        f"4way duration:  {fmt(derived.fourway_duration_ms)} ms\n"
         f"FT Used:        {fmt(derived.ft_success)}\n"
+        f"PMK Cache Used: {fmt(derived.pmksa_cache_used)}\n"
         f"EAP Start:      {fmt(derived.eap_start_time)}\n"
         f"EAP Success:    {fmt(derived.eap_success_time)}\n"
         f"EAP Failure:    {fmt(derived.eap_failure_time)}\n"
-        f"PMK Cache Used: {fmt(derived.pmksa_cache_used)}\n"
         f"EAP Duration:   {fmt(derived.eap_duration_ms)} ms\n"
+        f"4way start:     {fmt(derived.fourway_start_time)}\n"
+        f"4way success:   {fmt(derived.fourway_success_time)}\n"
+        f"4way duration:  {fmt(derived.fourway_duration_ms)} ms\n"
         f"Disconnect:     {fmt(derived.disconnect_bool)}\n"
         f"Disconnect cnt: {fmt(derived.disconnect_count)}\n"
         f"Roam Start:     {fmt(derived.roam_start_time)}\n"
@@ -257,5 +257,3 @@ def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
         results.append(derived)
 
     return results
-
-

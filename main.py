@@ -5,7 +5,7 @@ from log_analyzer import analyze_all_roams, pretty_print_derived
 from wpa_cli_wrapper import set_log_level, restore_log_level, get_current_connection, get_scan_results, roam_to_bssid
 
 
-def wait_for_connected(collected: CollectedLogs, start_index: int, timeout: float = 10.0) -> bool:
+def wait_for_connected(collected: CollectedLogs, start_index: int, timeout: float = 20.0) -> bool:
     """
     Watch logs for a CTRL-EVENT-CONNECTED message after a roam attempt.
     Returns True if seen, False if timed out.
@@ -52,8 +52,12 @@ def main():
             ssid_filter=current.ssid,
             current_bssid=current.bssid,
         )
-
+        #print candidates
+        print("Candidates\n")
+        for target in candidates:
+            print (f"BSSID:",target.bssid,"freq:",target.freq,"rssi:",target.rssi)
         # roam to each candidate
+        print("\n")
         for target in candidates:
             print(f"Roaming to {target.bssid} (RSSI {target.rssi} dBm, Freq {target.freq} MHz)")
             start_index = len(collected.raw_logs)
