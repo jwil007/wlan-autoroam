@@ -56,8 +56,6 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"Final BSSID:    {fmt(derived.roam_final_bssid)}\n"
         f"Final freq:     {fmt(derived.final_freq)}\n"
         f"Key mgmt:       {fmt(derived.key_mgmt)}\n"
-        f"Roam Start:     {fmt(derived.roam_start_time)}\n"
-        f"Roam End:       {fmt(derived.roam_end_time)}\n"
         f"4way start:     {fmt(derived.fourway_start_time)}\n"
         f"4way success:   {fmt(derived.fourway_success_time)}\n"
         f"4way duration:  {fmt(derived.fourway_duration_ms)} ms\n"
@@ -69,6 +67,8 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"EAP Duration:   {fmt(derived.eap_duration_ms)} ms\n"
         f"Disconnect:     {fmt(derived.disconnect_bool)}\n"
         f"Disconnect cnt: {fmt(derived.disconnect_count)}\n"
+        f"Roam Start:     {fmt(derived.roam_start_time)}\n"
+        f"Roam End:       {fmt(derived.roam_end_time)}\n"
         f"Roam Duration:  {fmt(derived.roam_duration_ms)} ms\n"
         f"----------------------\n"
     )
