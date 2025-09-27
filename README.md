@@ -5,12 +5,14 @@ This project uses native linux tools (wpa_cli, wpa_supplicant, and journalctl) t
 A Linux box with a Wi-Fi interface connect to an SSID. wpa_cli, wpa_supplicant, and journalctl are used.
 
 ## Usage
- `python3 main.py -i wlan0 -r -75 -d`
+ `python3 main.py -i wlan0 -r -75 -d 'logfile.txt'`
  
  ### Args:
  
- `-i` : Sets interface. Default is wlan0
- 
- `-r` : Sets min RSSI cutoff. Defaut is -75
- 
- `-d` : Saves wpa_supplicant logs during roams to debuglogs.txt in local directory. 
+  `-h, --help`          show this help message and exit
+  
+  `-i, --iface IFACE`   Wi-Fi interface to use. Default: wlan 0
+  
+  `-r, --rssi RSSI `    Minimum RSSI filter. Default: -75
+  
+  `-d, --debug [FILE]`  Save raw collected logs to a file (default: roam_debug.log if no FILE provided)
