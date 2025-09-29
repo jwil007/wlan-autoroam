@@ -70,6 +70,7 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"Roam Start:     {fmt(derived.roam_start_time)}\n"
         f"Roam End:       {fmt(derived.roam_end_time)}\n"
         f"Roam Duration:  {fmt(derived.roam_duration_ms)} ms\n"
+        f"Chunk Marker:   {fmt(derived.roam_duration_ms)} ms\n"
         f"----------------------\n"
     )
 
@@ -132,7 +133,8 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
                     if allow_multiple:
                         getattr(raw, attr).append(line)
                     else:
-                        setattr(raw, attr, line)
+                         if getattr(raw, attr) is None:   # only set first match
+                            setattr(raw, attr, line)
                     matched = True
                     break   # stop checking further markers for this attribute
             if matched:
