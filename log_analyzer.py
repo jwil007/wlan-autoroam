@@ -126,7 +126,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "pmksa_cache_used_log":(["PMKSA caching was used"], False),
         "freq_log":            (["Operating frequency changed from"], False),
         "noconfig_log":        (["No network configuration known"], False),
-        "notarget_log":        (["Target AP not found from BSS table", False])
+        "notarget_log":        (["Target AP not found from BSS table"], False)
 
     }
 
@@ -268,7 +268,8 @@ def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
 
     for chunk in chunks:
         raw = find_raw_logs(chunk)
-        print(raw.fourway_start_log)
+   #     print(raw.fourway_start_log)
+    #    print(raw.notarget_log)
         derived = derive_metrics(raw)
         results.append(derived)
 
