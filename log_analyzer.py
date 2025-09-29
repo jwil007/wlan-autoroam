@@ -118,7 +118,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "eap_failure_logs":    (["CTRL-EVENT-EAP-FAILURE"], True),
         "disconnect_logs":     (["State: ASSOCIATING -> DISCONNECTED","-> DISCONNECTED",], True),
         "key_mgmt_log":        (["WPA: using KEY_MGMT","RSN: using KEY_MGMT"], False),
-        "fourway_start_log":   (["WPA: RX message 1 of 4-Way Handshake"], False),
+        "fourway_start_log":   (["RX EAPOL from","WPA: RX message 1 of 4-Way Handshake"], False),
         "fourway_success_log": (["WPA: Key negotiation completed"], False),
         "pmksa_cache_used_log":(["PMKSA caching was used"], False),
         "freq_log":            (["Operating frequency changed from"], False),
@@ -259,7 +259,7 @@ def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
 
     for chunk in chunks:
         raw = find_raw_logs(chunk)
-        print(raw.noconfig_log)
+        print(raw.fourway_start_log)
         derived = derive_metrics(raw)
         results.append(derived)
 
