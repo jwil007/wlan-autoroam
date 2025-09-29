@@ -18,6 +18,7 @@ class LogAnalysisRaw:
     eap_failure_logs: list[str] = field(default_factory=list)
     disconnect_logs: list[str] = field(default_factory=list)
     pmksa_cache_used_log: str | None = None
+    noconfig_log: str | None = None
     other_logs: list[str] = field(default_factory=list)
 
 @dataclass
@@ -41,6 +42,7 @@ class LogAnalysisDerived:
     disconnect_count: int | None = None
     disconnect_bool: bool | None = None
     ft_success: bool | None = None
+    noconfig: bool | None = None
 
 def pretty_print_derived(derived: LogAnalysisDerived) -> str:
     def fmt(val, fmt_str="{:.2f}"):
@@ -70,7 +72,7 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"Roam Start:     {fmt(derived.roam_start_time)}\n"
         f"Roam End:       {fmt(derived.roam_end_time)}\n"
         f"Roam Duration:  {fmt(derived.roam_duration_ms)} ms\n"
-        f"Chunk Marker:   {fmt(derived.roam_duration_ms)} ms\n"
+        f"No config err:  {fmt(derived.noconfig)}\n"
         f"----------------------\n"
     )
 
@@ -107,7 +109,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
     # key = attribute name on LogAnalysisRaw
     # value = (list of markers, allow_multiple flag)
     LOG_MARKERS: dict[str, tuple[list[str], bool]] = {
-        "iface_control_start": (["CTRL_IFACE ROAM"], False),
+        "iface_control_start": (["CTRL_IFACE ROAM "], False),
         "roam_start_log":      (["State: COMPLETED -> AUTHENTICATING","Request association with","CTRL_IFACE ROAM"], False),
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
         "ft_success_logs":     (["FT: Completed successfully"], True),
@@ -119,14 +121,14 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "fourway_start_log":   (["WPA: RX message 1 of 4-Way Handshake"], False),
         "fourway_success_log": (["WPA: Key negotiation completed"], False),
         "pmksa_cache_used_log":(["PMKSA caching was used"], False),
-        "freq_log"            :(["Operating frequency changed from"], False),
+        "freq_log":            (["Operating frequency changed from"], False),
+        "noconfig_log":        (["No network configuration known"], False)
 
     }
 
     raw = LogAnalysisRaw()
 
     for line in logs:
-        matched = False
         for attr, (markers, allow_multiple) in LOG_MARKERS.items():
             for marker in markers:   # preserve order
                 if marker in line:
@@ -135,10 +137,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
                     else:
                          if getattr(raw, attr) is None:   # only set first match
                             setattr(raw, attr, line)
-                    matched = True
                     break   # stop checking further markers for this attribute
-            if matched:
-                break  # stop checking other attributes for this line
     return raw
 
 #Helper to extract timestamp
@@ -243,6 +242,11 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
     else:
         derived.ft_success = False
 
+    #No config error
+    if raw.noconfig_log:
+        derived.noconfig = True
+    else:
+        derived.noconfig = False
 
     return derived
 
@@ -255,6 +259,7 @@ def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
 
     for chunk in chunks:
         raw = find_raw_logs(chunk)
+        print(raw.noconfig_log)
         derived = derive_metrics(raw)
         results.append(derived)
 
