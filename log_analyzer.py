@@ -19,6 +19,7 @@ class LogAnalysisRaw:
     disconnect_logs: list[str] = field(default_factory=list)
     pmksa_cache_used_log: str | None = None
     noconfig_log: str | None = None
+    notarget_log: str | None = None
     other_logs: list[str] = field(default_factory=list)
 
 @dataclass
@@ -42,7 +43,8 @@ class LogAnalysisDerived:
     disconnect_count: int | None = None
     disconnect_bool: bool | None = None
     ft_success: bool | None = None
-    noconfig: bool | None = None
+    noconfig_err: bool | None = None
+    notarget_err: bool | None = None
 
 def pretty_print_derived(derived: LogAnalysisDerived) -> str:
     def fmt(val, fmt_str="{:.2f}"):
@@ -72,7 +74,8 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"Roam Start:     {fmt(derived.roam_start_time)}\n"
         f"Roam End:       {fmt(derived.roam_end_time)}\n"
         f"Roam Duration:  {fmt(derived.roam_duration_ms)} ms\n"
-        f"No config err:  {fmt(derived.noconfig)}\n"
+        f"No config err:  {fmt(derived.noconfig_err)}\n"
+        f"No target err:  {fmt(derived.notarget_err)}\n"
         f"----------------------\n"
     )
 
@@ -122,7 +125,8 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "fourway_success_log": (["WPA: Key negotiation completed"], False),
         "pmksa_cache_used_log":(["PMKSA caching was used"], False),
         "freq_log":            (["Operating frequency changed from"], False),
-        "noconfig_log":        (["No network configuration known"], False)
+        "noconfig_log":        (["No network configuration known"], False),
+        "notarget_log":        (["Target AP not found from BSS table", False])
 
     }
 
@@ -242,11 +246,16 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
     else:
         derived.ft_success = False
 
-    #No config error
+    #Error logs
     if raw.noconfig_log:
-        derived.noconfig = True
+        derived.noconfig_err = True
     else:
-        derived.noconfig = False
+        derived.noconfig_err = False
+    
+    if raw.notarget_log:
+        derived.notarget_err = True
+    else:
+        derived.notarget_err = False
 
     return derived
 
