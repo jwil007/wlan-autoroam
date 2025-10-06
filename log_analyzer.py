@@ -113,7 +113,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
     # value = (list of markers, allow_multiple flag)
     LOG_MARKERS: dict[str, tuple[list[str], bool]] = {
         "iface_control_start": (["CTRL_IFACE ROAM "], False),
-        "roam_start_log":      (["State: COMPLETED -> AUTHENTICATING","Request association with","CTRL_IFACE ROAM"], False),
+        "roam_start_log":      (["nl80211: Authentication request send successfully"], False),
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
         "ft_success_logs":     (["FT: Completed successfully"], True),
         "eap_start_logs":      (["CTRL-EVENT-EAP-START"], True),
@@ -268,6 +268,7 @@ def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
 
     for chunk in chunks:
         raw = find_raw_logs(chunk)
+        print("ROAM START LOG:", raw.roam_start_log)
    #     print(raw.fourway_start_log)
     #    print(raw.notarget_log)
         derived = derive_metrics(raw)
