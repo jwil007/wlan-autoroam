@@ -2,14 +2,7 @@ import argparse
 import time
 from log_collector import CollectedLogs, collect_logs, stop_log_collection
 from log_analyzer import analyze_all_roams, pretty_print_derived
-from wpa_cli_wrapper import (
-    set_log_level,
-    restore_log_level,
-    get_current_connection,
-    get_scan_results,
-    roam_to_bssid,
-)
-import subprocess
+from wpa_cli_wrapper import set_log_level, restore_log_level, get_current_connection, get_scan_results, roam_to_bssid
 
 
 def wait_for_connected(collected: CollectedLogs, start_index: int, timeout: float = 20.0) -> bool:
@@ -73,6 +66,7 @@ def main():
             current_bssid=current.bssid,
             use_iw=True
         )
+        #print candidates
         print("Candidates\n")
         for target in candidates:
             print (f"BSSID:",target.bssid,"freq:",target.freq,"rssi:",target.rssi)
@@ -82,21 +76,12 @@ def main():
             print(f"Roaming to {target.bssid} (RSSI {target.rssi} dBm, Freq {target.freq} MHz)")
             start_index = len(collected.raw_logs)
 
-            # perform the roam
             roam_to_bssid(iface, target.bssid)
 
             if wait_for_connected(collected, start_index):
-                print(f"Roam to {target.bssid} completed")
-                # small delay to let the connection settle
-                time.sleep(1)
-                # trigger a controlled deauth (instead of full disconnect)
-                subprocess.run(["wpa_cli", "-i", iface, "deauthenticate", target.bssid],
-                            capture_output=True, text=True)
-                time.sleep(0.5)
+                print("Roam to", target.bssid, "completed")
             else:
-                print(f"Roam to {target.bssid} timed out or failed")
-
-
+                print("Roam to", target.bssid, "timed out or failed")
 
         # analyze logs afterwards
         results = analyze_all_roams(collected)
@@ -108,12 +93,12 @@ def main():
         restore_log_level(iface, original_log_level)
     
     if args.debug:
-        try:
-            with open(args.debug, "w") as f:
-                f.writelines(collected.raw_logs)
-            print(f"Saved raw logs to {args.debug}")
-        except Exception as e:
-            print(f"Failed to save debug logs: {e}")
+            try:
+                with open(args.debug, "w") as f:
+                    f.writelines(collected.raw_logs)
+                print(f"Saved raw logs to {args.debug}")
+            except Exception as e:
+                print(f"Failed to save debug logs: {e}")
 
 
 if __name__ == "__main__":
