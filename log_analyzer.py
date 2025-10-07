@@ -130,7 +130,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "roam_start_log":      (["nl80211: Authentication request send successfully","nl80211: Connect request send successfully","CTRL_IFACE ROAM "], False),
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
         "auth_complete_log":   (["State: AUTHENTICATING -> ASSOCIATING"], False),
-        "assoc_start_log":     (["nl80211: Association request send successfully"], False),
+        "assoc_start_log":     (["nl80211: Association request send successfully","nl80211: Connect request send successfully"], False),
         "assoc_complete_log":  (["State: ASSOCIATING -> ASSOCIATED"], False),
         "ft_success_logs":     (["FT: Completed successfully"], True),
         "eap_start_logs":      (["CTRL-EVENT-EAP-START"], True),
