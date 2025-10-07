@@ -1,8 +1,8 @@
 # wlan-autoroam-cli
-This project uses native Linux tools (wpa_cli, wpa_supplicant, and journalctl) to automatically scan and roam (reassociate) to BSSIDs in your ESS. It checks the current SSID you are connected to and identifies candidate APs to roam to above a configurable RSSI threshold. The roaming process is sequenced in descending order of RSSI, with the final roam being a return to the original BSSID.
+This project uses native Linux tools (iw, wpa_cli, wpa_supplicant, and journalctl) to automatically scan and roam (reassociate) to BSSIDs in your ESS. It checks the current SSID you are connected to and identifies candidate APs to roam to above a configurable RSSI threshold. The roaming process is sequenced in descending order of RSSI, with the final roam being a return to the original BSSID.
 
 ## Requirements
-A Linux box with a Wi-Fi interface connect to an SSID. Python3, wpa_cli, wpa_supplicant, and journalctl.
+A Linux box with a Wi-Fi interface connect to an SSID. Python3, iw, wpa_cli, wpa_supplicant, and journalctl.
 
 ## Usage
  `python3 main.py -i wlan0 -r -75 -d 'logfile.txt'`
@@ -21,23 +21,31 @@ A Linux box with a Wi-Fi interface connect to an SSID. Python3, wpa_cli, wpa_sup
 
 ```
 --- Roam Analysis ---
-Target BSSID:   24:79:2a:8e:01:f8
-Final BSSID:    24:79:2a:8e:01:f8
-Final freq:     2462
-Key mgmt:       802.1X
+Target BSSID:   02:e0:fc:d7:9e:cf
+Final BSSID:    02:e0:fc:d7:9e:cf
+Final freq:     5180
+Key mgmt:       802.1X with SHA256
 FT Used:        False
-PMK Cache Used: True
-EAP Start:      N/A
-EAP Success:    N/A
+PMK Cache Used: False
+Auth Start time:2025-10-07 10:23:05.916673
+Auth fin time:  2025-10-07 10:23:05.952643
+Auth duration:  35.97 ms
+Assoc strt time:2025-10-07 10:23:05.952862
+Assoc fin time: 2025-10-07 10:23:05.964232
+Assoc duration: 11.37 ms
+EAP Start:      2025-10-07 10:23:06.106088
+EAP Success:    2025-10-07 10:23:06.122105
 EAP Failure:    N/A
-EAP Duration:   N/A ms
-4way start:     2025-09-27 14:26:36.268725
-4way success:   2025-09-27 14:26:36.274773
-4way duration:  6.05 ms
+EAP Duration:   16.02 ms
+4way start:     2025-10-07 10:23:06.122888
+4way success:   2025-10-07 10:23:06.128503
+4way duration:  5.62 ms
 Disconnect:     False
 Disconnect cnt: N/A
-Roam Start:     2025-09-27 14:26:36.164589
-Roam End:       2025-09-27 14:26:36.274791
-Roam Duration:  110.20 ms
+Roam Start:     2025-10-07 10:23:05.916673
+Roam End:       2025-10-07 10:23:06.128528
+Roam Duration:  211.85 ms
+No config err:  False
+No target err:  False
 ----------------------
 ```
