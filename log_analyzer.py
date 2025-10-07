@@ -8,6 +8,9 @@ class LogAnalysisRaw:
     iface_control_start: str | None = None
     roam_start_log: str | None = None
     roam_end_log: str | None = None
+    auth_complete_log: str | None = None
+    assoc_start_log: str | None = None
+    assoc_complete_log: str | None = None
     freq_log: str | None = None
     key_mgmt_log: str | None = None
     fourway_start_log: str | None = None
@@ -26,6 +29,11 @@ class LogAnalysisRaw:
 class LogAnalysisDerived:
     roam_target_bssid: str | None = None
     roam_final_bssid: str | None = None
+    auth_complete_time: datetime | None = None
+    auth_duration_ms: datetime | None = None
+    assoc_start_time: float | None = None
+    assoc_complete_time: datetime | None = None
+    assoc_duration_ms: float | None = None
     final_freq: int | None = None
     roam_start_time: datetime | None = None
     roam_end_time: datetime | None = None
@@ -62,6 +70,12 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"Key mgmt:       {fmt(derived.key_mgmt)}\n"
         f"FT Used:        {fmt(derived.ft_success)}\n"
         f"PMK Cache Used: {fmt(derived.pmksa_cache_used)}\n"
+        f"Auth Start time:{fmt(derived.roam_start_time)}\n"
+        f"Auth fin time:  {fmt(derived.auth_complete_time)}\n"
+        f"Auth duration:  {fmt(derived.auth_duration_ms)} ms\n"
+        f"Assoc strt time:{fmt(derived.assoc_start_time)}\n"
+        f"Assoc fin time: {fmt(derived.assoc_complete_time)}\n"
+        f"Assoc duration: {fmt(derived.assoc_duration_ms)} ms\n"
         f"EAP Start:      {fmt(derived.eap_start_time)}\n"
         f"EAP Success:    {fmt(derived.eap_success_time)}\n"
         f"EAP Failure:    {fmt(derived.eap_failure_time)}\n"
@@ -115,13 +129,16 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "iface_control_start": (["CTRL_IFACE ROAM "], False),
         "roam_start_log":      (["nl80211: Authentication request send successfully"], False),
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
+        "auth_complete_log":   (["State: AUTHENTICATING -> ASSOCIATING"], False),
+        "assoc_start_log":     (["nl80211: Association request send successfully"], False),
+        "assoc_complete_log":  (["State: ASSOCIATING -> ASSOCIATED"], False),
         "ft_success_logs":     (["FT: Completed successfully"], True),
         "eap_start_logs":      (["CTRL-EVENT-EAP-START"], True),
         "eap_success_logs":    (["CTRL-EVENT-EAP-SUCCESS"], True),
         "eap_failure_logs":    (["CTRL-EVENT-EAP-FAILURE"], True),
         "disconnect_logs":     (["State: ASSOCIATING -> DISCONNECTED","-> DISCONNECTED",], True),
         "key_mgmt_log":        (["WPA: using KEY_MGMT","RSN: using KEY_MGMT"], False),
-        "fourway_start_log":   (["RX EAPOL from","WPA: RX message 1 of 4-Way Handshake"], False),
+        "fourway_start_log":   (["WPA: RX message 1 of 4-Way Handshake"], False),
         "fourway_success_log": (["WPA: Key negotiation completed"], False),
         "pmksa_cache_used_log":(["PMKSA caching was used"], False),
         "freq_log":            (["Operating frequency changed from"], False),
@@ -167,6 +184,9 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
     TIMESTAMP_FIELDS: dict[str, tuple[str, bool]] = {
         "roam_start_time":     ("roam_start_log", False),
         "roam_end_time":       ("roam_end_log", False),
+        "auth_complete_time":  ("auth_complete_log", False),
+        "assoc_start_time":    ("assoc_start_log", False),
+        "assoc_complete_time": ("assoc_complete_log", False),
         "fourway_start_time":  ("fourway_start_log", False),
         "fourway_success_time":("fourway_success_log", False),
         "eap_start_time":      ("eap_start_logs", True),
@@ -182,15 +202,22 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
             value = value[0]  # take the first log line
         setattr(derived, derived_attr, parse_ts_from_line(value, year))
 
-    #durations
+    #total roam duration
     if derived.roam_start_time and derived.roam_end_time:
         duration = derived.roam_end_time - derived.roam_start_time
         derived.roam_duration_ms = duration.total_seconds() * 1000
-
+    #4way duration
     if derived.fourway_start_time and derived.fourway_success_time:
         duration = derived.fourway_success_time - derived.fourway_start_time
         derived.fourway_duration_ms = duration.total_seconds() * 1000
-
+    #auth duration
+    if derived.roam_start_time and derived.auth_complete_time:
+        duration = derived.auth_complete_time - derived.roam_start_time
+        derived.auth_duration_ms = duration.total_seconds() * 1000
+    #assoc duration
+    if derived.assoc_start_time and derived.assoc_complete_time:
+        duration = derived.assoc_complete_time - derived.assoc_start_time
+        derived.assoc_duration_ms = duration.total_seconds() * 1000
     # --- EAP duration ---
     if raw.eap_start_logs:
         start_ts = raw.eap_start_logs[0][:22]
