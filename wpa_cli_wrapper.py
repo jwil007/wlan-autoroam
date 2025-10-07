@@ -1,5 +1,6 @@
 import subprocess
 from time import sleep
+import time
 from dataclasses import dataclass
 
 #This code contains the wpa_cli commands to get current SSID, get scan list, and initiate roams.
@@ -118,16 +119,29 @@ def get_scan_results(
                         ssid=parts[4]
                     ))
     else:
+
+        MAX_RETRIES = 5
+        RETRY_DELAY = 2.0  # seconds
+
         print("scanning with iw")
-        # --- new iw path ---
-        # Perform an active scan for the target SSID
         scan_cmd = ["sudo", "iw", "dev", iface, "scan"]
         if ssid_filter:
             scan_cmd += ["ssid", ssid_filter]
-        subprocess.run(scan_cmd, capture_output=True, text=True)
 
-        r = subprocess.run(["sudo", "iw", "dev", iface, "scan"],
-                           capture_output=True, text=True)
+        results_output = None
+        for attempt in range(1, MAX_RETRIES + 1):
+            subprocess.run(scan_cmd, capture_output=True, text=True)
+            r = subprocess.run(["sudo", "iw", "dev", iface, "scan"],
+                            capture_output=True, text=True)
+            if r.stdout.strip():
+                results_output = r.stdout
+                break
+            print(f"[iw scan] attempt {attempt}/{MAX_RETRIES} returned no results, retrying...")
+            time.sleep(RETRY_DELAY)
+
+        if results_output is None:
+            print("[iw scan] no scan results after retries.")
+            return []  # or optionally fall back to wpa_cli path
 
         bssid, freq, ssid, rssi = None, None, None, None
         for line in r.stdout.splitlines():
@@ -135,7 +149,7 @@ def get_scan_results(
             if line.startswith("BSS "):
                 # Commit previous entry
                 if bssid and ssid and rssi is not None:
-                    if (not ssid_filter or ssid_filter in ssid) and rssi >= mrssi:
+                    if (not ssid_filter or ssid == ssid_filter) and rssi >= mrssi:
                         results.append(ParsedScanResults(
                             bssid=bssid,
                             freq=freq,
@@ -164,7 +178,7 @@ def get_scan_results(
 
         # Commit last entry
         if bssid and ssid and rssi is not None:
-            if (not ssid_filter or ssid_filter in ssid) and rssi >= mrssi:
+            if (not ssid_filter or ssid == ssid_filter) and rssi >= mrssi:
                 results.append(ParsedScanResults(
                     bssid=bssid,
                     freq=freq,

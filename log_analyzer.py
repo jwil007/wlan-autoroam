@@ -127,7 +127,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
     # value = (list of markers, allow_multiple flag)
     LOG_MARKERS: dict[str, tuple[list[str], bool]] = {
         "iface_control_start": (["CTRL_IFACE ROAM "], False),
-        "roam_start_log":      (["nl80211: Authentication request send successfully"], False),
+        "roam_start_log":      (["nl80211: Authentication request send successfully","nl80211: Connect request send successfully","CTRL_IFACE ROAM "], False),
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
         "auth_complete_log":   (["State: AUTHENTICATING -> ASSOCIATING"], False),
         "assoc_start_log":     (["nl80211: Association request send successfully"], False),
@@ -149,16 +149,20 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
 
     raw = LogAnalysisRaw()
 
+
     for line in logs:
         for attr, (markers, allow_multiple) in LOG_MARKERS.items():
-            for marker in markers:   # preserve order
+            for priority, marker in enumerate(markers):
                 if marker in line:
                     if allow_multiple:
                         getattr(raw, attr).append(line)
                     else:
-                         if getattr(raw, attr) is None:   # only set first match
+                        existing = getattr(raw, attr)
+                        # either no previous match or this marker has higher priority
+                        if existing is None or priority < getattr(raw, f"{attr}_priority", float("inf")):
                             setattr(raw, attr, line)
-                    break   # stop checking further markers for this attribute
+                            setattr(raw, f"{attr}_priority", priority)
+                    break
     return raw
 
 #Helper to extract timestamp
