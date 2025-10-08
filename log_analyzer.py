@@ -8,7 +8,11 @@ class LogAnalysisRaw:
     iface_control_start: str | None = None
     roam_start_log: str | None = None
     roam_end_log: str | None = None
+    auth_err_logs: list[str] = field(default_factory=list)
+    auth_type_log: str | None = None
+    auth_start_log: str | None = None
     auth_complete_log: str | None = None
+    assoc_err_logs: list[str] = field(default_factory=list)
     assoc_start_log: str | None = None
     assoc_complete_log: str | None = None
     freq_log: str | None = None
@@ -16,6 +20,7 @@ class LogAnalysisRaw:
     fourway_start_log: str | None = None
     fourway_success_log: str | None = None
     ft_success_logs: list[str] = field(default_factory=list)
+    eap_method_log: str | None = None
     eap_start_logs: list[str] = field(default_factory=list)
     eap_success_logs: list[str] = field(default_factory=list)
     eap_failure_logs: list[str] = field(default_factory=list)
@@ -29,6 +34,8 @@ class LogAnalysisRaw:
 class LogAnalysisDerived:
     roam_target_bssid: str | None = None
     roam_final_bssid: str | None = None
+    auth_type: str | None = None
+    auth_start_time: datetime | None = None
     auth_complete_time: datetime | None = None
     auth_duration_ms: datetime | None = None
     assoc_start_time: float | None = None
@@ -41,6 +48,7 @@ class LogAnalysisDerived:
     fourway_start_time: datetime | None = None
     fourway_success_time: datetime | None = None
     fourway_duration_ms: float | None = None
+    eap_type: str | None = None
     eap_start_time: datetime | None = None
     eap_success_time: datetime | None = None
     eap_failure_time: datetime | None = None
@@ -70,12 +78,14 @@ def pretty_print_derived(derived: LogAnalysisDerived) -> str:
         f"Key mgmt:       {fmt(derived.key_mgmt)}\n"
         f"FT Used:        {fmt(derived.ft_success)}\n"
         f"PMK Cache Used: {fmt(derived.pmksa_cache_used)}\n"
-        f"Auth Start time:{fmt(derived.roam_start_time)}\n"
+        f"Auth type:      {fmt(derived.auth_type)}\n"
+        f"Auth Start time:{fmt(derived.auth_start_time)}\n"
         f"Auth fin time:  {fmt(derived.auth_complete_time)}\n"
         f"Auth duration:  {fmt(derived.auth_duration_ms)} ms\n"
         f"Assoc strt time:{fmt(derived.assoc_start_time)}\n"
         f"Assoc fin time: {fmt(derived.assoc_complete_time)}\n"
         f"Assoc duration: {fmt(derived.assoc_duration_ms)} ms\n"
+        f"EAP Type:       {fmt(derived.eap_type)}\n"
         f"EAP Start:      {fmt(derived.eap_start_time)}\n"
         f"EAP Success:    {fmt(derived.eap_success_time)}\n"
         f"EAP Failure:    {fmt(derived.eap_failure_time)}\n"
@@ -123,20 +133,28 @@ def split_into_roams(logs: list[str]) -> list[list[str]]:
 
 #matches raw logs
 def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
-    # key = attribute name on LogAnalysisRaw
-    # value = (list of markers, allow_multiple flag)
     LOG_MARKERS: dict[str, tuple[list[str], bool]] = {
         "iface_control_start": (["CTRL_IFACE ROAM "], False),
-        "roam_start_log":      (["nl80211: Authentication request send successfully","nl80211: Connect request send successfully","CTRL_IFACE ROAM "], False),
+        "roam_start_log":      (["nl80211: Authentication request send successfully",
+                                 "nl80211: Connect request send successfully",
+                                 "CTRL_IFACE ROAM "], False),
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
+        "auth_type_log":       (["* Auth Type"], False),
+        "auth_err_logs":       (["CTRL-EVENT-AUTH-REJECT"], True),
+        "auth_start_log":      (["nl80211: Authentication request send successfully",
+                                 "nl80211: Connect request send successfully",
+                                 "CTRL_IFACE ROAM "], False),
         "auth_complete_log":   (["State: AUTHENTICATING -> ASSOCIATING"], False),
-        "assoc_start_log":     (["nl80211: Association request send successfully","nl80211: Connect request send successfully"], False),
+        "assoc_err_logs":      (["CTRL-EVENT-ASSOC-REJECT"], True), 
+        "assoc_start_log":     (["nl80211: Association request send successfully",
+                                 "nl80211: Connect request send successfully"], False),
         "assoc_complete_log":  (["State: ASSOCIATING -> ASSOCIATED"], False),
         "ft_success_logs":     (["FT: Completed successfully"], True),
+        "eap_method_log":      (["CTRL-EVENT-EAP-METHOD"], False),
         "eap_start_logs":      (["CTRL-EVENT-EAP-START"], True),
         "eap_success_logs":    (["CTRL-EVENT-EAP-SUCCESS"], True),
         "eap_failure_logs":    (["CTRL-EVENT-EAP-FAILURE"], True),
-        "disconnect_logs":     (["State: ASSOCIATING -> DISCONNECTED","-> DISCONNECTED",], True),
+        "disconnect_logs":     (["State: ASSOCIATING -> DISCONNECTED","-> DISCONNECTED"], True),
         "key_mgmt_log":        (["WPA: using KEY_MGMT","RSN: using KEY_MGMT"], False),
         "fourway_start_log":   (["WPA: RX message 1 of 4-Way Handshake"], False),
         "fourway_success_log": (["WPA: Key negotiation completed"], False),
@@ -144,11 +162,9 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "freq_log":            (["Operating frequency changed from"], False),
         "noconfig_log":        (["No network configuration known"], False),
         "notarget_log":        (["Target AP not found from BSS table"], False)
-
     }
 
     raw = LogAnalysisRaw()
-
 
     for line in logs:
         for attr, (markers, allow_multiple) in LOG_MARKERS.items():
@@ -158,8 +174,9 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
                         getattr(raw, attr).append(line)
                     else:
                         existing = getattr(raw, attr)
-                        # either no previous match or this marker has higher priority
-                        if existing is None or priority < getattr(raw, f"{attr}_priority", float("inf")):
+                        existing_prio = getattr(raw, f"{attr}_priority", float("inf"))
+                        # Only replace if no previous match OR this marker has higher priority
+                        if existing is None or priority < existing_prio:
                             setattr(raw, attr, line)
                             setattr(raw, f"{attr}_priority", priority)
                     break
@@ -188,6 +205,7 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
     TIMESTAMP_FIELDS: dict[str, tuple[str, bool]] = {
         "roam_start_time":     ("roam_start_log", False),
         "roam_end_time":       ("roam_end_log", False),
+        "auth_start_time":     ("auth_start_log", False),
         "auth_complete_time":  ("auth_complete_log", False),
         "assoc_start_time":    ("assoc_start_log", False),
         "assoc_complete_time": ("assoc_complete_log", False),
@@ -243,6 +261,29 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
         if eap_start_time and eap_end_time:
             derived.eap_duration_ms = (eap_end_time - eap_start_time).total_seconds() * 1000
 
+    #Get EAP type
+    if raw.eap_method_log:
+        m = re.search(r"\(([^)]+)\)", raw.eap_method_log)
+        derived.eap_type = m.group(1) if m else None
+    
+    #Get 802.11 auth type and map integer to actual type
+    if raw.auth_type_log:
+        try:
+            auth_int = int(re.search(r"Auth Type (\d+)", raw.auth_type_log).group(1))
+            auth_map = {
+                0: "Open System",
+                1: "Shared Key",
+                2: "FT",
+                3: "Network EAP",
+                4: "SAE",
+                5: "FILS-SK",
+                6: "FILS-SK-PFS",
+                7: "FILS-PK",
+            }
+            derived.auth_type = auth_map.get(auth_int, f"Unknown ({auth_int})")
+        except Exception:
+            derived.auth_type = None
+
     #Get MACs for target and final BSSID
     if raw.iface_control_start:
         derived.roam_target_bssid = extract_mac(raw.iface_control_start)
@@ -290,19 +331,20 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
 
     return derived
 
-def analyze_all_roams(collected: CollectedLogs) -> list[LogAnalysisDerived]:
+def analyze_all_roams(collected: CollectedLogs) -> list[tuple[LogAnalysisDerived, LogAnalysisRaw]]:
     """
     High-level orchestrator: split logs → extract raw → compute derived.
     """
     chunks = split_into_roams(collected.raw_logs)
-    results: list[LogAnalysisDerived] = []
+    results: list[tuple[LogAnalysisDerived, LogAnalysisRaw]] = []
 
     for chunk in chunks:
         raw = find_raw_logs(chunk)
         print("ROAM START LOG:", raw.roam_start_log)
-   #     print(raw.fourway_start_log)
+        print(raw.auth_err_logs)
+        print(raw.assoc_err_logs)
     #    print(raw.notarget_log)
         derived = derive_metrics(raw)
-        results.append(derived)
+        results.append((derived,raw))
 
     return results
