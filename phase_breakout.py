@@ -40,13 +40,17 @@ class PhaseResult:
 def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisRaw] = None) -> Dict[str, Dict]:
     """Consume existing derived + raw analysis results and organize by phase."""
 
+    def fmt(ms):
+        """Round to 2 decimal places if not None."""
+        return round(ms, 2) if isinstance(ms, (int, float)) else None
+
     # Base info for each phase
     phases: list[PhaseResult] = [
         PhaseResult(
             name="Authentication",
             start=derived.roam_start_time,
             end=derived.auth_complete_time,
-            duration_ms=derived.auth_duration_ms,
+            duration_ms=fmt(derived.auth_duration_ms),
             status="success" if derived.auth_complete_time else "unknown",
             type=derived.auth_type or "unknown",
             errors=[],
@@ -59,7 +63,7 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
             name="Association",
             start=derived.assoc_start_time,
             end=derived.assoc_complete_time,
-            duration_ms=derived.assoc_duration_ms,
+            duration_ms=fmt(derived.assoc_duration_ms),
             status="success" if derived.assoc_complete_time else "unknown",
             type="reassoc" if derived.assoc_start_time else "unknown",
             errors=[],
@@ -69,7 +73,7 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
             name="EAP",
             start=derived.eap_start_time,
             end=derived.eap_success_time or derived.eap_failure_time,
-            duration_ms=derived.eap_duration_ms,
+            duration_ms=fmt(derived.eap_duration_ms),
             status=("failure" if derived.eap_failure_time else
                     "success" if derived.eap_success_time else "unknown"),
             type=derived.eap_type or "802.1X",
@@ -80,7 +84,7 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
             name="4-Way",
             start=derived.fourway_start_time,
             end=derived.fourway_success_time,
-            duration_ms=derived.fourway_duration_ms,
+            duration_ms=fmt(derived.fourway_duration_ms),
             status="success" if derived.fourway_success_time else "unknown",
             type="RSN handshake",
             errors=[],
