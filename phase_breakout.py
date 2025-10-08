@@ -1,149 +1,125 @@
-
 """
 phase_breakout.py
 -----------------
-Post-analysis module for wlan-autoroam-cli.
+Per-phase enrichment built on top of log_analyzer.py results.
 
-Takes LogAnalysisDerived (and optionally raw logs) to produce structured
-per-phase results with success/fail status, type, duration, and errors.
+Uses the existing LogAnalysisDerived (and optionally LogAnalysisRaw)
+to produce structured per-phase data for downstream use.
 """
 
 from dataclasses import dataclass, asdict
 from datetime import datetime
-from typing import List, Optional, Dict
+from typing import Optional, List, Dict
 import json
-import re
+from log_analyzer import LogAnalysisDerived, LogAnalysisRaw
+
 
 # ============================================================
-#  Phase Base + Subclasses
+#  Phase data container
 # ============================================================
 
 @dataclass
-class PhaseBase:
+class PhaseResult:
     name: str
-    start: Optional[datetime] = None
-    end: Optional[datetime] = None
-    duration_ms: Optional[float] = None
+    start: Optional[datetime]
+    end: Optional[datetime]
+    duration_ms: Optional[float]
     status: str = "unknown"
     type: str = "unknown"
     errors: List[str] = None
-    log_snippets: List[str] = None
-
-    def __post_init__(self):
-        self.errors = [] if self.errors is None else self.errors
-        self.log_snippets = [] if self.log_snippets is None else self.log_snippets
-
-    def analyze(self, logs: List[str]):
-        """Default phase analysis (to be overridden)."""
-        pass
+    details: Dict[str, str] = None  # any extra derived info (FT used, PMK cache, etc.)
 
     def to_dict(self):
         return asdict(self)
 
 
-class AuthPhase(PhaseBase):
-    def analyze(self, logs: List[str]):
-        for l in logs:
-            if "SAE" in l:
-                self.type = "SAE"
-            elif "FT" in l:
-                self.type = "FT"
-            elif "open system" in l.lower():
-                self.type = "Open"
-            if any(x in l for x in ["auth failed", "timeout", "challenge failed"]):
-                self.errors.append(l)
-        self.status = "failure" if self.errors else "success"
-
-
-class AssocPhase(PhaseBase):
-    def analyze(self, logs: List[str]):
-        for l in logs:
-            if "Associated with" in l:
-                self.status = "success"
-            if any(x in l for x in ["Association request", "reject", "timeout"]):
-                self.errors.append(l)
-        if self.errors:
-            self.status = "failure"
-
-
-class EapPhase(PhaseBase):
-    def analyze(self, logs: List[str]):
-        if any("EAP-Success" in l for l in logs):
-            self.status = "success"
-        if any("EAP-Failure" in l for l in logs):
-            self.status = "failure"
-        if any("TLS" in l for l in logs):
-            self.type = "TLS"
-        elif any("PEAP" in l for l in logs):
-            self.type = "PEAP"
-
-
-class FourWayPhase(PhaseBase):
-    def analyze(self, logs: List[str]):
-        if any("4-Way Handshake failed" in l for l in logs):
-            self.status = "failure"
-            self.errors = [l for l in logs if "4-Way Handshake failed" in l]
-        elif any("WPA: Key negotiation completed" in l for l in logs):
-            self.status = "success"
-
-
 # ============================================================
-#  Log filtering helpers
+#  Phase analysis using existing derived fields
 # ============================================================
 
-def extract_timestamp(line: str) -> Optional[datetime]:
-    """Try to parse the timestamp from a syslog-style line."""
-    try:
-        match = re.match(r"([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{2}:\d{2}:\d{2}\.\d+)", line)
-        if not match:
-            return None
-        month_str, day, timestr = match.groups()
-        ts_str = f"{month_str} {day} {timestr}"
-        return datetime.strptime(ts_str, "%b %d %H:%M:%S.%f")
-    except Exception:
-        return None
+def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisRaw] = None) -> Dict[str, Dict]:
+    """Consume existing derived + raw analysis results and organize by phase."""
 
-
-def filter_logs_by_time(raw_logs: List[str], start: datetime, end: datetime) -> List[str]:
-    """Return log lines that fall between the given timestamps."""
-    if not start or not end:
-        return []
-    subset = []
-    for line in raw_logs:
-        ts = extract_timestamp(line)
-        if ts and start <= ts <= end:
-            subset.append(line)
-    return subset
-
-
-# ============================================================
-#  Orchestration
-# ============================================================
-
-def analyze_all_phases(derived, raw_logs: List[str]) -> Dict[str, Dict]:
-    """Create and run per-phase analyzers using time windows from LogAnalysisDerived."""
-    phases = []
-
-    mapping = [
-        ("Authentication", AuthPhase, derived.auth_start_time or derived.roam_start_time, derived.auth_complete_time, derived.auth_duration_ms),
-        ("Association", AssocPhase, derived.assoc_start_time, derived.assoc_complete_time, derived.assoc_duration_ms),
-        ("EAP", EapPhase, derived.eap_start_time, derived.eap_success_time or derived.eap_failure_time, derived.eap_duration_ms),
-        ("4-Way", FourWayPhase, derived.fourway_start_time, derived.fourway_success_time, derived.fourway_duration_ms),
+    # Base info for each phase
+    phases: list[PhaseResult] = [
+        PhaseResult(
+            name="Authentication",
+            start=derived.roam_start_time,
+            end=derived.auth_complete_time,
+            duration_ms=derived.auth_duration_ms,
+            status="success" if derived.auth_complete_time else "unknown",
+            type=derived.auth_type or "unknown",
+            errors=[],
+            details={
+                "ft_used": str(derived.ft_success),
+                "pmksa_cache_used": str(derived.pmksa_cache_used),
+            },
+        ),
+        PhaseResult(
+            name="Association",
+            start=derived.assoc_start_time,
+            end=derived.assoc_complete_time,
+            duration_ms=derived.assoc_duration_ms,
+            status="success" if derived.assoc_complete_time else "unknown",
+            type="reassoc" if derived.assoc_start_time else "unknown",
+            errors=[],
+            details={"disconnects": str(derived.disconnect_count or 0)},
+        ),
+        PhaseResult(
+            name="EAP",
+            start=derived.eap_start_time,
+            end=derived.eap_success_time or derived.eap_failure_time,
+            duration_ms=derived.eap_duration_ms,
+            status=("failure" if derived.eap_failure_time else
+                    "success" if derived.eap_success_time else "unknown"),
+            type=derived.eap_type or "802.1X",
+            errors=[],
+            details={},
+        ),
+        PhaseResult(
+            name="4-Way",
+            start=derived.fourway_start_time,
+            end=derived.fourway_success_time,
+            duration_ms=derived.fourway_duration_ms,
+            status="success" if derived.fourway_success_time else "unknown",
+            type="RSN handshake",
+            errors=[],
+            details={
+                "pmksa_cache_used": str(derived.pmksa_cache_used),
+            },
+        ),
     ]
 
-    for name, cls, start, end, dur in mapping:
-        phase = cls(name=name, start=start, end=end, duration_ms=dur)
-        phase_logs = filter_logs_by_time(raw_logs, start, end)
-        phase.analyze(phase_logs)
-        phases.append(phase)
+    # Enrich with error logs if we have raw data
+    if raw:
+        if raw.eap_failure_logs:
+            for l in raw.eap_failure_logs:
+                phases[2].errors.append(l)
+        if raw.disconnect_logs:
+            for l in raw.disconnect_logs:
+                phases[1].errors.append(l)
+        if raw.assoc_err_logs:
+            for log in raw.assoc_err_logs:
+                phases[1].errors.append(log)
+        if raw.noconfig_log:
+            phases[0].errors.append(raw.noconfig_log)
+        if raw.notarget_log:
+            phases[0].errors.append(raw.notarget_log)
+        if raw.auth_err_logs:
+            for log in raw.auth_err_logs:
+                phases[0].errors.append(log)
 
     return {p.name: p.to_dict() for p in phases}
 
 
-def save_phase_breakout(derived, raw_logs: List[str], output_path="phase_breakout.json"):
-    results = analyze_all_phases(derived, raw_logs)
+# ============================================================
+#  JSON export
+# ============================================================
+
+def save_phase_breakout(derived: LogAnalysisDerived, raw: Optional[LogAnalysisRaw] = None,
+                        output_path="phase_breakout.json"):
+    """Analyze and export per-phase JSON using existing derived results."""
+    results = analyze_from_derived(derived, raw)
     with open(output_path, "w") as f:
         json.dump(results, f, indent=2, default=str)
     print(f"[+] Phase-level analysis saved to {output_path}")
-
-
