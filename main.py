@@ -1,5 +1,6 @@
 import argparse
 import time
+import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from log_collector import CollectedLogs, collect_logs, stop_log_collection
@@ -173,13 +174,19 @@ def main():
     # ----------------------------------------
     # Optional: save raw logs for debug
     # ----------------------------------------
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+    data_dir = os.path.join(repo_root, "data")
+    os.makedirs(data_dir, exist_ok=True)
+
     if args.debug:
         try:
-            with open(args.debug, "w") as f:
+            # Ensure the debug path lives in /data
+            debug_path = os.path.join(data_dir, os.path.basename(args.debug))
+            with open(debug_path, "w") as f:
                 f.writelines(collected.raw_logs)
-            print(f"Saved raw logs to {args.debug}")
+            print(f"[+] Saved raw logs to {debug_path}")
         except Exception as e:
-            print(f"Failed to save debug logs: {e}")
+            print(f"[!] Failed to save debug logs: {e}")
 
 
 if __name__ == "__main__":

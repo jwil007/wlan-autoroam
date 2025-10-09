@@ -189,6 +189,19 @@ input[type=number] {
   -moz-appearance: textfield; /* Firefox */
   appearance: textfield;
 }
+/* Properly disable button interaction + hover effects */
+button:disabled,
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: none; /* remove hover glow if any */
+  transition: none;
+  background: var(--panel2);
+  color: var(--muted);
+  border-color: var(--line);
+}
+
 
 
 </style>
@@ -204,6 +217,12 @@ input[type=number] {
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <label class="btn" for="file">Load JSON</label>
         <input id="file" type="file" accept="application/json" style="display:none" />
+        <button class="btn" id="btnDownloadLog"
+        style="background: var(--panel2); color: var(--text); border:1px solid var(--line); opacity:0.5;"
+        disabled>
+        ⬇ Debug logs
+        </button>
+
       </div>
 
       <!-- Right side -->
@@ -227,6 +246,7 @@ input[type=number] {
             placeholder="roam_debug.log"
             style="width:110px;background:var(--panel2);color:var(--text);
             border:1px solid var(--line);border-radius:6px;padding:4px 6px;">
+        </button>
         </div>
         <button class="btn" id="btnRunNow"
           style="background: var(--ok); color: var(--bg);">
@@ -616,11 +636,16 @@ const runBtn = document.getElementById('btnRunNow');
 const statusLabel = document.getElementById('runStatus');
 const debugCheck = document.getElementById('debugCheck');
 const debugFile = document.getElementById('debugFile');
+const downloadBtn = document.getElementById('btnDownloadLog');
 
 debugCheck.addEventListener('change', () => {
-  debugFile.disabled = !debugCheck.checked;
-  debugFile.style.opacity = debugCheck.checked ? '1.0' : '0.4';
+  const enabled = debugCheck.checked;
+  debugFile.disabled = !enabled;
+  debugFile.style.opacity = enabled ? '1.0' : '0.4';
+  downloadBtn.disabled = !enabled;
+  downloadBtn.style.opacity = enabled ? '1.0' : '0.5';
 });
+
 debugFile.disabled = true;
 debugFile.style.opacity = '0.4';
 
@@ -635,6 +660,7 @@ runBtn.addEventListener('click', async () => {
   const rssi = parseInt(document.getElementById('rssi').value.trim() || "-75", 10);
   const debugEnabled = document.getElementById('debugCheck').checked;
   const debugFile = document.getElementById('debugFile').value.trim() || "roam_debug.log";
+  
 
   const payload = {
     iface,
@@ -714,8 +740,8 @@ async function pollForSummary() {
         window.lastSummaryMtime = mtime;
         console.log("Got NEW cycle summary:", data);
         renderCycleSummary(data);
-        statusLabel.textContent = "Roam complete ✅";
-        setTimeout(() => { statusLabel.textContent = ""; }, 10000);
+        // statusLabel.textContent = "Roam complete ✅";
+        // setTimeout(() => { statusLabel.textContent = ""; }, 10000);
         return;
       }
     }
@@ -731,6 +757,57 @@ function renderCycleSummary(summary) {
   window.data = summary;
   loadData(summary);
 }
+
+downloadBtn.addEventListener('click', async () => {
+  const debugFileName = document.getElementById('debugFile').value.trim() || "roam_debug.log";
+
+  try {
+    const res = await fetch(`/api/download_log?filename=${encodeURIComponent(debugFileName)}`);
+    if (!res.ok) {
+      alert("No debug log found.");
+      return;
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = debugFileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to download log.");
+  }
+});
+
+debugCheck.addEventListener('change', async () => {
+  const enabled = debugCheck.checked;
+  debugFile.disabled = !enabled;
+  debugFile.style.opacity = enabled ? '1.0' : '0.4';
+
+  // Default disable the download button
+  downloadBtn.disabled = true;
+  downloadBtn.style.opacity = '0.5';
+
+  if (enabled) {
+    const debugFileName = document.getElementById('debugFile').value.trim() || "roam_debug.log";
+    try {
+      const res = await fetch(`/api/log_exists?filename=${encodeURIComponent(debugFileName)}`);
+      const { exists } = await res.json();
+      if (exists) {
+        downloadBtn.disabled = false;
+        downloadBtn.style.opacity = '1.0';
+      } else {
+        console.log("Debug log not found yet, keeping button disabled");
+      }
+    } catch (err) {
+      console.warn("Error checking log existence:", err);
+    }
+  }
+});
+
 </script>
 </body>
 </html>

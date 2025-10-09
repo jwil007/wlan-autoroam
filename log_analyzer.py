@@ -1,4 +1,5 @@
 from log_collector import CollectedLogs
+import os
 from datetime import datetime
 from dataclasses import dataclass, field
 import re
@@ -349,6 +350,35 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
 
     return derived
 
+def save_failed_roam_logs(chunk: list[str], derived: 'LogAnalysisDerived', index: int):
+    """
+    Save logs for failed roam chunks into data/failed_roams/.
+    Filename example:
+      roam_fail_173523_roam3_06e0fcd79ed0.log
+    """
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+    fail_dir = os.path.join(repo_root, "data", "failed_roams")
+    os.makedirs(fail_dir, exist_ok=True)
+
+    # Short timestamp: HHMMSS for compact uniqueness
+    ts = datetime.now().strftime("%H%M%S")
+
+    # Sanitize BSSID: remove colons if present
+    target = derived.roam_target_bssid or "unknown"
+    safe_bssid = target.replace(":", "").lower()
+
+    # Build readable filename
+    fname = f"roam_fail_{ts}_roam{index}_{safe_bssid}.log"
+    path = os.path.join(fail_dir, fname)
+
+    try:
+        with open(path, "w") as f:
+            f.writelines(line if line.endswith("\n") else line + "\n" for line in chunk)
+        print(f"[!] Saved failed roam logs to {path}")
+    except Exception as e:
+        print(f"[x] Failed to save failed roam logs: {e}")
+
+        
 def analyze_all_roams(collected: CollectedLogs) -> list[tuple[LogAnalysisDerived, LogAnalysisRaw]]:
     """
     High-level orchestrator: split logs → extract raw → compute derived.
@@ -356,13 +386,21 @@ def analyze_all_roams(collected: CollectedLogs) -> list[tuple[LogAnalysisDerived
     chunks = split_into_roams(collected.raw_logs)
     results: list[tuple[LogAnalysisDerived, LogAnalysisRaw]] = []
 
-    for chunk in chunks:
+    for i, chunk in enumerate(chunks, start=1):
         raw = find_raw_logs(chunk)
-    #    print("ROAM START LOG:", raw.roam_start_log)
-       # print(raw.pmksa_err_logs)
-      #  print(raw.assoc_err_logs)
-    #    print(raw.notarget_log)
         derived = derive_metrics(raw)
-        results.append((derived,raw))
+        results.append((derived, raw))
+
+        # --- NEW: save failed roam logs ---
+        roam_failed = (
+            derived.roam_fail_time is not None
+            or not derived.roam_end_time
+            or derived.noconfig_err
+            or derived.notarget_err
+            or derived.disconnect_bool
+        )
+        if roam_failed:
+            save_failed_roam_logs(chunk, derived, i)
+
 
     return results
