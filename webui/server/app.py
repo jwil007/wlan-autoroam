@@ -21,15 +21,27 @@ def start_roam():
     # Clear old log
     open(LOG_FILE, "w").close()
 
-    # Launch main.py and redirect stdout/stderr to log file
+    data = request.get_json(force=True) or {}
+    iface = data.get("iface", "wlan0")
+    rssi = str(data.get("rssi", -75))
+    debug = data.get("debug")
+
+    cmd = ["python3", "-u", MAIN_SCRIPT, "-i", iface, "-r", rssi]
+    if debug:
+        cmd += ["-d", debug]
+
+    print(f"[+] Launching: {' '.join(cmd)}")
+
     logf = open(LOG_FILE, "a")
     subprocess.Popen(
-        ["python3", "-u", MAIN_SCRIPT],  # ← notice the -u here
+        cmd,
         stdout=logf,
         stderr=subprocess.STDOUT,
         bufsize=1
     )
-    return jsonify({"status": "started"})
+
+    return jsonify({"status": "started", "cmd": cmd})
+
 
 @app.route('/api/latest_cycle_summary')
 def latest_summary():

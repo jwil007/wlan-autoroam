@@ -359,7 +359,7 @@ def analyze_all_roams(collected: CollectedLogs) -> list[tuple[LogAnalysisDerived
     for chunk in chunks:
         raw = find_raw_logs(chunk)
     #    print("ROAM START LOG:", raw.roam_start_log)
-        print(raw.pmksa_err_logs)
+       # print(raw.pmksa_err_logs)
       #  print(raw.assoc_err_logs)
     #    print(raw.notarget_log)
         derived = derive_metrics(raw)

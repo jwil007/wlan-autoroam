@@ -246,18 +246,18 @@ def get_scan_results(
         results = non_current + current
 
     # --- Print summary for debug ---
-    print("\n=== Parsed iw scan results ===\n")
-    for ap in results:
-        print(f"BSSID: {ap.bssid}")
-        print(f"  SSID:             {ap.ssid}")
-        print(f"  Freq:             {ap.freq} MHz")
-        print(f"  RSSI:             {ap.rssi} dBm")
-        print(f"  Supported rates:  {ap.supported_rates}")
-        print(f"  Auth suites:      {', '.join(ap.auth_suites) if ap.auth_suites else 'N/A'}")
-        print(f"  MFP flag:         {ap.mfp_flag}")
-        print(f"  QBSS util prct:   {ap.qbss_util_prct if ap.qbss_util_prct is not None else 'N/A'}%")
-        print(f"  QBSS STA count:   {ap.qbss_sta_count if ap.qbss_sta_count is not None else 'N/A'}\n")
-    print("====================================\n")
+    # print("\n=== Parsed iw scan results ===\n")
+    # for ap in results:
+    #     print(f"BSSID: {ap.bssid}")
+    #     print(f"  SSID:             {ap.ssid}")
+    #     print(f"  Freq:             {ap.freq} MHz")
+    #     print(f"  RSSI:             {ap.rssi} dBm")
+    #     print(f"  Supported rates:  {ap.supported_rates}")
+    #     print(f"  Auth suites:      {', '.join(ap.auth_suites) if ap.auth_suites else 'N/A'}")
+    #     print(f"  MFP flag:         {ap.mfp_flag}")
+    #     print(f"  QBSS util prct:   {ap.qbss_util_prct if ap.qbss_util_prct is not None else 'N/A'}%")
+    #     print(f"  QBSS STA count:   {ap.qbss_sta_count if ap.qbss_sta_count is not None else 'N/A'}\n")
+    # print("====================================\n")
 
     return results
 

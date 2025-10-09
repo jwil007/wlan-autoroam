@@ -140,23 +140,102 @@
   /* 🔧 Spacing normalization: ensure equal spacing between sections */
   #reportView > .grid { margin-bottom: 30px; }  /* was 16px */
   #reportView > .panel { margin-top: 0; }
+
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--line);
+  border-radius: 20px;
+  transition: .3s;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--muted);
+  transition: .3s;
+  border-radius: 50%;
+}
+.toggle input:checked + .slider {
+  background-color: var(--ok);
+}
+.toggle input:checked + .slider:before {
+  transform: translateX(20px);
+  background-color: var(--bg);
+}
+
+/* Hide number input spin buttons */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield; /* Firefox */
+  appearance: textfield;
+}
+
+
 </style>
 </head>
 <body>
 <div class="container">
   <main id="app">
     <!-- ===== Header controls ===== -->
-    <header id="headerBar" class="panel" style="display:flex;align-items:center;gap:10px;">
+    <header id="headerBar" class="panel" 
+      style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      
+      <!-- Left side -->
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <button class="btn" id="btnSample">Use sample</button>
         <label class="btn" for="file">Load JSON</label>
         <input id="file" type="file" accept="application/json" style="display:none" />
-        <button class="btn" id="btnReset">Reset view</button>
-        <button class="btn" id="btnRunNow" style="background: var(--ok); color: var(--bg);">
-        ▶ Run Now
-        </button>
-        <span id="runStatus" style="margin-left:8px;color:var(--muted);font-size:0.9em;"></span>
       </div>
+
+      <!-- Right side -->
+      <div style="display:flex;align-items:center;gap:8px;">
+                <!-- ===== CLI ARG INPUTS ===== -->
+        <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-left:8px;">
+          <label for="iface" class="muted">iface:</label>
+          <input id="iface" type="text" placeholder="wlan0"
+            style="width:50px;background:var(--panel2);color:var(--text);
+            border:1px solid var(--line);border-radius:6px;padding:4px 6px;">
+          <label for="rssi" class="muted">min_rssi:</label>
+          <input id="rssi" type="number" placeholder="-75"
+            style="width:23px;background:var(--panel2);color:var(--text);
+            border:1px solid var(--line);border-radius:6px;padding:4px 6px;">
+          <label for="debug" class="muted">debug:</label>
+          <label class="toggle">
+            <input id="debugCheck" type="checkbox">
+            <span class="slider"></span>
+          </label>
+          <input id="debugFile" type="text"
+            placeholder="roam_debug.log"
+            style="width:110px;background:var(--panel2);color:var(--text);
+            border:1px solid var(--line);border-radius:6px;padding:4px 6px;">
+        </div>
+        <button class="btn" id="btnRunNow"
+          style="background: var(--ok); color: var(--bg);">
+          ▶ Run Now
+        </button>
+        <span id="runStatus" 
+          style="color:var(--muted);font-size:0.9em;"></span>
+      </div>
+
       <!-- Future: quick actions could live here -->
     </header>
 
@@ -274,8 +353,6 @@
 </style>
 
 <script>
-/*** ---------- sample data (your JSON pasted in) ---------- ***/
-const SAMPLE = {"ssid":"try-a-band","security_type":"SAE","timestamp":"2025-10-08T12:28:22.935081-07:00","execution_duration_s":4.63,"candidates":[{"bssid":"0c:e0:fc:d7:9e:ce","freq":2437,"rssi":-12,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":7.5,"qbss_sta_count":0},{"bssid":"0e:e0:fc:d7:9e:d1","freq":6335,"rssi":-36,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0* 9.0 12.0 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":0.4,"qbss_sta_count":0},{"bssid":"0c:e0:fc:d7:9f:50","freq":2462,"rssi":-45,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":9.0,"qbss_sta_count":0},{"bssid":"0e:e0:fc:d7:9f:51","freq":5745,"rssi":-50,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":4.3,"qbss_sta_count":0},{"bssid":"0e:e0:fc:d7:9f:53","freq":6115,"rssi":-73,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0* 9.0 12.0 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":0.4,"qbss_sta_count":0},{"bssid":"0e:e0:fc:d7:9e:cf","freq":5180,"rssi":-18,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":3.1,"qbss_sta_count":1}],"roams":[{"roam_index":1,"target_bssid":"0c:e0:fc:d7:9e:ce","final_bssid":"0c:e0:fc:d7:9e:ce","final_freq":null,"overall_status":"failure","roam_duration_ms":187.54,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:23.100258","end":"2025-10-08 12:28:23.130525","duration_ms":30.27,"status":"success","type":"Open System","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:23.130669","end":"2025-10-08 12:28:23.237970","duration_ms":107.3,"status":"success","type":"reassoc","errors":["Oct 08 12:28:23.169284 kaliLinux wpa_supplicant[857]: wlan0: State: ASSOCIATING -> DISCONNECTED\n","Oct 08 12:28:23.169078 kaliLinux wpa_supplicant[857]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=0c:e0:fc:d7:9e:ce status_code=53\n"],"details":{"disconnects":"1"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:23.281396","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:23.281498","end":"2025-10-08 12:28:23.287784","duration_ms":6.29,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}},{"roam_index":2,"target_bssid":"0e:e0:fc:d7:9e:d1","final_bssid":"0e:e0:fc:d7:9e:d1","final_freq":"6335","overall_status":"success","roam_duration_ms":177.05,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:23.892110","end":"2025-10-08 12:28:23.983161","duration_ms":91.05,"status":"success","type":"SAE","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:23.983325","end":"2025-10-08 12:28:23.996383","duration_ms":13.06,"status":"success","type":"reassoc","errors":[],"details":{"disconnects":"0"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:24.062413","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:24.062510","end":"2025-10-08 12:28:24.069141","duration_ms":6.63,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}},{"roam_index":3,"target_bssid":"0c:e0:fc:d7:9f:50","final_bssid":"0c:e0:fc:d7:9f:50","final_freq":"2462","overall_status":"success","roam_duration_ms":130.32,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:24.704187","end":"2025-10-08 12:28:24.742612","duration_ms":38.43,"status":"success","type":"SAE","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:24.742771","end":"2025-10-08 12:28:24.754762","duration_ms":11.99,"status":"success","type":"reassoc","errors":[],"details":{"disconnects":"0"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:24.825836","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:24.825924","end":"2025-10-08 12:28:24.834488","duration_ms":8.56,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}},{"roam_index":4,"target_bssid":"0e:e0:fc:d7:9f:51","final_bssid":"0e:e0:fc:d7:9f:51","final_freq":"5745","overall_status":"success","roam_duration_ms":99.82,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:25.520712","end":"2025-10-08 12:28:25.562554","duration_ms":41.84,"status":"success","type":"SAE","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:25.562726","end":"2025-10-08 12:28:25.576902","duration_ms":14.18,"status":"success","type":"reassoc","errors":[],"details":{"disconnects":"0"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:25.615395","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:25.615494","end":"2025-10-08 12:28:25.620510","duration_ms":5.02,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}},{"roam_index":5,"target_bssid":"0e:e0:fc:d7:9f:53","final_bssid":"0e:e0:fc:d7:9f:53","final_freq":"6115","overall_status":"success","roam_duration_ms":241.22,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:26.082252","end":"2025-10-08 12:28:26.234191","duration_ms":151.94,"status":"success","type":"SAE","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:26.234346","end":"2025-10-08 12:28:26.248356","duration_ms":14.01,"status":"success","type":"reassoc","errors":[],"details":{"disconnects":"0"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:26.316663","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:26.316760","end":"2025-10-08 12:28:26.323459","duration_ms":6.7,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}},{"roam_index":6,"target_bssid":"0e:e0:fc:d7:9e:cf","final_bssid":"0e:e0:fc:d7:9e:cf","final_freq":"5180","overall_status":"success","roam_duration_ms":129.37,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:26.925194","end":"2025-10-08 12:28:26.966569","duration_ms":41.38,"status":"success","type":"SAE","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:26.966741","end":"2025-10-08 12:28:26.986300","duration_ms":19.56,"status":"success","type":"reassoc","errors":[],"details":{"disconnects":"0"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:27.047604","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:27.047688","end":"2025-10-08 12:28:27.054542","duration_ms":6.85,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}}]};
 
 /*** ---------- state ---------- ***/
 let data = null;
@@ -310,15 +387,6 @@ const median = arr => {
 };
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
-/*** ---------- file & sample ---------- ***/
-$("#btnSample").onclick = () => loadData(SAMPLE);
-$("#btnReset").onclick  = () => { visible = new Set(PHASES.map(p=>p.key)); renderAll(); }
-$("#file").addEventListener("change", e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = () => { try{ loadData(JSON.parse(r.result)); }catch(err){ alert("Invalid JSON"); } };
-  r.readAsText(f);
-});
 
 /*** ---------- main render pipeline ---------- ***/
 function loadData(d){
@@ -329,7 +397,6 @@ function loadData(d){
   renderChart();
   renderRoams();
 }
-function renderAll(){ renderChart(); }
 
 /*** ---------- header/metrics ---------- ***/
 function renderHeader(){
@@ -543,24 +610,47 @@ function showOverlay(msg="Running roam...") {
 function hideOverlay() {
   document.getElementById('overlay').style.display = 'none';
 }
-/*** ---------- init ---------- ***/
-loadData(SAMPLE);
 </script>
 <script>
 const runBtn = document.getElementById('btnRunNow');
 const statusLabel = document.getElementById('runStatus');
+const debugCheck = document.getElementById('debugCheck');
+const debugFile = document.getElementById('debugFile');
+
+debugCheck.addEventListener('change', () => {
+  debugFile.disabled = !debugCheck.checked;
+  debugFile.style.opacity = debugCheck.checked ? '1.0' : '0.4';
+});
+debugFile.disabled = true;
+debugFile.style.opacity = '0.4';
+
 
 runBtn.addEventListener('click', async () => {
   runBtn.disabled = true;
   statusLabel.textContent = "";
   showOverlay();
 
-  try {
-    const startRes = await fetch('/api/start_roam', { method: 'POST' });
-    const startData = await startRes.json();
-    console.log("Roam started:", startData);
+  // collect UI inputs
+  const iface = document.getElementById('iface').value.trim() || "wlan0";
+  const rssi = parseInt(document.getElementById('rssi').value.trim() || "-75", 10);
+  const debugEnabled = document.getElementById('debugCheck').checked;
+  const debugFile = document.getElementById('debugFile').value.trim() || "roam_debug.log";
 
-    // Begin polling for logs and summary
+  const payload = {
+    iface,
+    rssi,
+    debug: debugEnabled ? debugFile : null
+  };
+
+  try {
+    const startRes = await fetch('/api/start_roam', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const startData = await startRes.json();
+    console.log("Roam started with args:", payload, startData);
+
     pollLogs();
     await pollForSummary();
 
@@ -572,6 +662,7 @@ runBtn.addEventListener('click', async () => {
     hideOverlay();
   }
 });
+
 
 let lastLogLength = 0;
 
