@@ -690,24 +690,67 @@ runBtn.addEventListener('click', async () => {
 });
 
 
+// --- Global state for log polling ---
+let logPollController = null;
+let logPollingActive = false;
 let lastLogLength = 0;
 
+
 async function pollLogs() {
+  if (logPollingActive) {
+    console.warn("⛔ pollLogs already running — skipping duplicate start");
+    return;
+  }
+  logPollingActive = true;
+
   const logBox = document.getElementById('logOutput');
+  logBox.textContent = "";
   lastLogLength = 0;
-  for (let i = 0; i < 300; i++) { // 5 min max
-    const res = await fetch(`/api/logs?nocache=${Date.now()}`);
-    if (res.ok) {
-      const { log } = await res.json();
-      if (log.length > lastLogLength) {
-        const newPart = log.slice(lastLogLength);
-        logBox.textContent += newPart;
-        logBox.scrollTop = logBox.scrollHeight;
-        lastLogLength = log.length;
+
+  if (logPollController) logPollController.abort();
+  logPollController = new AbortController();
+  const signal = logPollController.signal;
+
+  console.log("📡 Starting log polling");
+
+  try {
+    while (true) {
+      // Stop condition #1 — external abort
+      if (signal.aborted) {
+        console.log("⚙️ Abort signal received — breaking loop");
+        break;
       }
+
+      const res = await fetch(`/api/logs?nocache=${Date.now()}`, { signal });
+      if (res.ok) {
+        const { log } = await res.json();
+        if (log.length > lastLogLength) {
+          const newPart = log.slice(lastLogLength);
+          logBox.textContent += newPart;
+          logBox.scrollTop = logBox.scrollHeight;
+          lastLogLength = log.length;
+        }
+      }
+
+      // Stop condition #2 — roam finished (overlay hidden)
+      const overlayVisible = document.getElementById('overlay').style.display === 'flex';
+      if (!overlayVisible) {
+        console.log("✅ Overlay hidden — stopping log polling");
+        break;
+      }
+
+      // Wait 1 second total
+      await new Promise(r => setTimeout(r, 1000));
     }
-    await new Promise(r => setTimeout(r, 1000));
-    if (statusLabel.textContent.includes("complete")) break;
+  } catch (err) {
+    if (err.name === "AbortError") {
+      console.log("🛑 Log polling aborted (fetch aborted)");
+    } else {
+      console.error("Log polling error:", err);
+    }
+  } finally {
+    logPollingActive = false;
+    console.log("🛑 Log polling stopped (finally)");
   }
 }
 
@@ -752,6 +795,7 @@ async function pollForSummary() {
 
   statusLabel.textContent = "Timed out waiting for roam.";
 }
+
 function renderCycleSummary(summary) {
   console.log("Rendering new roam data:", summary);
   window.data = summary;
