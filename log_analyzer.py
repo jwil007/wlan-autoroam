@@ -8,6 +8,7 @@ class LogAnalysisRaw:
     iface_control_start: str | None = None
     roam_start_log: str | None = None
     roam_end_log: str | None = None
+    roam_fail_log: str | None = None
     auth_err_logs: list[str] = field(default_factory=list)
     auth_type_log: str | None = None
     auth_start_log: str | None = None
@@ -25,7 +26,12 @@ class LogAnalysisRaw:
     eap_success_logs: list[str] = field(default_factory=list)
     eap_failure_logs: list[str] = field(default_factory=list)
     disconnect_logs: list[str] = field(default_factory=list)
+    auth_disco_log: str | None = None
+    assoc_disco_log: str | None = None
+    eap_disco_log: str | None = None
+    fourway_disco_log: str | None = None
     pmksa_cache_used_log: str | None = None
+    pmksa_err_logs: list[str] = field(default_factory=list)
     noconfig_log: str | None = None
     notarget_log: str | None = None
     other_logs: list[str] = field(default_factory=list)
@@ -44,6 +50,7 @@ class LogAnalysisDerived:
     final_freq: int | None = None
     roam_start_time: datetime | None = None
     roam_end_time: datetime | None = None
+    roam_fail_time: datetime | None = None
     wpa_params: str | None = None
     fourway_start_time: datetime | None = None
     fourway_success_time: datetime | None = None
@@ -139,6 +146,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
                                  "nl80211: Connect request send successfully",
                                  "CTRL_IFACE ROAM "], False),
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
+        "roam_fail_log":       (["-> DISCONNECTED"], False),
         "auth_type_log":       (["* Auth Type"], False),
         "auth_err_logs":       (["CTRL-EVENT-AUTH-REJECT"], True),
         "auth_start_log":      (["nl80211: Authentication request send successfully",
@@ -155,10 +163,15 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "eap_success_logs":    (["CTRL-EVENT-EAP-SUCCESS"], True),
         "eap_failure_logs":    (["CTRL-EVENT-EAP-FAILURE"], True),
         "disconnect_logs":     (["State: ASSOCIATING -> DISCONNECTED","-> DISCONNECTED"], True),
+        "auth_disco_log":      (["State: AUTHENTICATING -> DISCONNECTED",], False),
+        "assoc_disco_log":     (["State: ASSOCIATING -> DISCONNECTED",], False),
+        "eap_disco_log":       (["####TBD###",], False),
+        "fourway_disco_log":   (["State: 4WAY_HANDSHAKE -> DISCONNECTED","State: GROUP_HANDSHAKE -> DISCONNECTED"], False),
         "key_mgmt_log":        (["WPA: using KEY_MGMT","RSN: using KEY_MGMT"], False),
         "fourway_start_log":   (["WPA: RX message 1 of 4-Way Handshake"], False),
         "fourway_success_log": (["WPA: Key negotiation completed"], False),
         "pmksa_cache_used_log":(["PMKSA caching was used"], False),
+        "pmksa_err_logs":      (["PMKSA caching attempt rejected"], True),
         "freq_log":            (["Operating frequency changed from"], False),
         "noconfig_log":        (["No network configuration known"], False),
         "notarget_log":        (["Target AP not found from BSS table"], False)
@@ -205,6 +218,7 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
     TIMESTAMP_FIELDS: dict[str, tuple[str, bool]] = {
         "roam_start_time":     ("roam_start_log", False),
         "roam_end_time":       ("roam_end_log", False),
+        "roam_fail_time":      ("roam_fail_log", False),
         "auth_start_time":     ("auth_start_log", False),
         "auth_complete_time":  ("auth_complete_log", False),
         "assoc_start_time":    ("assoc_start_log", False),
@@ -225,9 +239,13 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
         setattr(derived, derived_attr, parse_ts_from_line(value, year))
 
     #total roam duration
-    if derived.roam_start_time and derived.roam_end_time:
-        duration = derived.roam_end_time - derived.roam_start_time
-        derived.roam_duration_ms = duration.total_seconds() * 1000
+    if derived.roam_start_time:
+        if derived.roam_end_time:
+            duration = derived.roam_end_time - derived.roam_start_time
+            derived.roam_duration_ms = duration.total_seconds() * 1000
+        elif derived.roam_fail_time:
+            duration = derived.roam_fail_time - derived.roam_start_time
+            derived.roam_duration_ms = duration.total_seconds() * 1000
     #4way duration
     if derived.fourway_start_time and derived.fourway_success_time:
         duration = derived.fourway_success_time - derived.fourway_start_time
@@ -341,7 +359,7 @@ def analyze_all_roams(collected: CollectedLogs) -> list[tuple[LogAnalysisDerived
     for chunk in chunks:
         raw = find_raw_logs(chunk)
     #    print("ROAM START LOG:", raw.roam_start_log)
-     #   print(raw.auth_err_logs)
+        print(raw.pmksa_err_logs)
       #  print(raw.assoc_err_logs)
     #    print(raw.notarget_log)
         derived = derive_metrics(raw)

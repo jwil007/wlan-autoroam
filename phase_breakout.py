@@ -75,7 +75,7 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
             end=derived.eap_success_time or derived.eap_failure_time,
             duration_ms=fmt(derived.eap_duration_ms),
             status=("failure" if derived.eap_failure_time else
-                    "success" if derived.eap_success_time else "unknown"),
+                    "success" if derived.eap_success_time else "N/A"),
             type=derived.eap_type or "802.1X",
             errors=[],
             details={},
@@ -99,9 +99,6 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
         if raw.eap_failure_logs:
             for l in raw.eap_failure_logs:
                 phases[2].errors.append(l)
-        if raw.disconnect_logs:
-            for l in raw.disconnect_logs:
-                phases[1].errors.append(l)
         if raw.assoc_err_logs:
             for log in raw.assoc_err_logs:
                 phases[1].errors.append(log)
@@ -112,6 +109,18 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
         if raw.auth_err_logs:
             for log in raw.auth_err_logs:
                 phases[0].errors.append(log)
+        if raw.pmksa_err_logs:
+            for log in raw.pmksa_err_logs:
+                phases[1].errors.append(log)
+        if raw.auth_disco_log:
+            phases[0].errors.append(raw.auth_disco_log)
+        if raw.assoc_disco_log:
+            phases[1].errors.append(raw.assoc_disco_log)
+        if raw.eap_disco_log:
+            phases[2].errors.append(raw.eap_disco_log)
+        if raw.fourway_disco_log:
+            phases[3].errors.append(raw.fourway_disco_log)
+
 
     return {p.name: p.to_dict() for p in phases}
 
