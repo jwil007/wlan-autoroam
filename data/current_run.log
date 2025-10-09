@@ -1,0 +1,111 @@
+Log level currently set to INFO
+changing log level to DEBUG OK
+
+Current SSID:  IoT
+Current BSSID: 06:e0:fc:d7:9e:cf
+
+Scanning with iw on wlan0...
+[IoT] * Capabilities: 16-PTKSA-RC 1-GTKSA-RC (0x000c)
+[IoT] * Capabilities: 16-PTKSA-RC 1-GTKSA-RC (0x000c)
+[IoT] * Capabilities: 16-PTKSA-RC 1-GTKSA-RC (0x000c)
+[IoT] * Capabilities: 16-PTKSA-RC 1-GTKSA-RC (0x000c)
+[DEBUG] Parsed 4 BSS entries after filtering
+
+
+=== Parsed iw scan results ===
+
+BSSID: 0a:e0:fc:d7:9e:ce
+  SSID:             IoT
+  Freq:             2437 MHz
+  RSSI:             -16 dBm
+  Supported rates:  6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0
+  Auth suites:      PSK
+  MFP flag:         No MFP
+  QBSS util prct:   10.6%
+  QBSS STA count:   0
+
+BSSID: 06:e0:fc:d7:9f:50
+  SSID:             IoT
+  Freq:             2462 MHz
+  RSSI:             -44 dBm
+  Supported rates:  6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0
+  Auth suites:      PSK
+  MFP flag:         No MFP
+  QBSS util prct:   8.6%
+  QBSS STA count:   1
+
+BSSID: 02:e0:fc:d7:9f:51
+  SSID:             IoT
+  Freq:             5745 MHz
+  RSSI:             -52 dBm
+  Supported rates:  6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0
+  Auth suites:      PSK
+  MFP flag:         No MFP
+  QBSS util prct:   2.4%
+  QBSS STA count:   2
+
+BSSID: 06:e0:fc:d7:9e:cf
+  SSID:             IoT
+  Freq:             5180 MHz
+  RSSI:             -17 dBm
+  Supported rates:  6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0
+  Auth suites:      PSK
+  MFP flag:         No MFP
+  QBSS util prct:   3.1%
+  QBSS STA count:   4
+
+====================================
+
+Candidates:
+  BSSID: 0a:e0:fc:d7:9e:ce  Freq: 2437 MHz  RSSI: -16 dBm
+  BSSID: 06:e0:fc:d7:9f:50  Freq: 2462 MHz  RSSI: -44 dBm
+  BSSID: 02:e0:fc:d7:9f:51  Freq: 5745 MHz  RSSI: -52 dBm
+  BSSID: 06:e0:fc:d7:9e:cf  Freq: 5180 MHz  RSSI: -17 dBm
+
+
+>>> Roaming to 0a:e0:fc:d7:9e:ce (RSSI -16 dBm, 2437 MHz)
+Connected event: Oct 09 10:42:01.264752 kaliLinux wpa_supplicant[857]: wlan0: CTRL-EVENT-CONNECTED - Connection to 0a:e0:fc:d7:9e:ce completed [id=0 id_str=]
+Roam to 0a:e0:fc:d7:9e:ce completed successfully
+
+>>> Roaming to 06:e0:fc:d7:9f:50 (RSSI -44 dBm, 2462 MHz)
+Connected event: Oct 09 10:42:02.054490 kaliLinux wpa_supplicant[857]: wlan0: CTRL-EVENT-CONNECTED - Connection to 06:e0:fc:d7:9f:50 completed [id=0 id_str=]
+Roam to 06:e0:fc:d7:9f:50 completed successfully
+
+>>> Roaming to 02:e0:fc:d7:9f:51 (RSSI -52 dBm, 5745 MHz)
+Connected event: Oct 09 10:42:02.971918 kaliLinux wpa_supplicant[857]: wlan0: CTRL-EVENT-CONNECTED - Connection to 02:e0:fc:d7:9f:51 completed [id=0 id_str=]
+Roam to 02:e0:fc:d7:9f:51 completed successfully
+
+>>> Roaming to 06:e0:fc:d7:9e:cf (RSSI -17 dBm, 5180 MHz)
+Connected event: Oct 09 10:42:03.462856 kaliLinux wpa_supplicant[857]: wlan0: CTRL-EVENT-CONNECTED - Connection to 06:e0:fc:d7:9e:cf completed [id=0 id_str=]
+Roam to 06:e0:fc:d7:9e:cf completed successfully
+
+================== Post-Roam Analysis ==================
+
+[]
+[]
+[]
+[]
+--- Phase Analysis for Roam #1 ---
+Authentication  | Status: success  | Duration:   30.27 ms | Errors: 0
+Association     | Status: success  | Duration:   21.27 ms | Errors: 0
+EAP             | Status: N/A      | Duration:     N/A ms | Errors: 0
+4-Way           | Status: success  | Duration:     5.0 ms | Errors: 0
+--- Phase Analysis for Roam #2 ---
+Authentication  | Status: success  | Duration:   30.43 ms | Errors: 0
+Association     | Status: success  | Duration:   12.21 ms | Errors: 0
+EAP             | Status: N/A      | Duration:     N/A ms | Errors: 0
+4-Way           | Status: success  | Duration:     5.6 ms | Errors: 0
+--- Phase Analysis for Roam #3 ---
+Authentication  | Status: success  | Duration:  113.38 ms | Errors: 0
+Association     | Status: success  | Duration:   12.51 ms | Errors: 0
+EAP             | Status: N/A      | Duration:     N/A ms | Errors: 0
+4-Way           | Status: success  | Duration:     3.6 ms | Errors: 0
+--- Phase Analysis for Roam #4 ---
+Authentication  | Status: success  | Duration:   34.43 ms | Errors: 0
+Association     | Status: success  | Duration:    12.4 ms | Errors: 0
+EAP             | Status: N/A      | Duration:     N/A ms | Errors: 0
+4-Way           | Status: success  | Duration:    3.64 ms | Errors: 0
+[+] Full cycle summary saved to /home/jacob/GitStuff/wlan-autoroam-cli/data/cycle_summary.json
+Stopped log collection
+returned log level to original value: INFO OK
+

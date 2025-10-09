@@ -8,7 +8,7 @@ Combines:
   • Per-roam derived metrics and phase analysis
   • Execution metadata (timestamps, total duration)
 """
-
+import os
 import json
 import time
 from datetime import datetime
@@ -33,7 +33,7 @@ def build_cycle_summary(
         "timestamp": timestamp,
         "execution_duration_s": round(execution_duration_s or 0, 2),
         "candidates": candidates,
-        "roams": []
+        "roams": []      
     }
 
     for idx, (derived, raw) in enumerate(derived_raw_pairs, start=1):
@@ -53,7 +53,19 @@ def build_cycle_summary(
 
 
 def save_cycle_summary(summary: Dict, output_file: str = "cycle_summary.json"):
-    """Write full cycle summary to disk."""
-    with open(output_file, "w") as f:
+    """Write full cycle summary to the repo's data directory."""
+    # Correct root is the directory where this script resides
+    repo_root = os.path.abspath(os.path.dirname(__file__))
+    data_dir = os.path.join(repo_root, "data")
+    os.makedirs(data_dir, exist_ok=True)
+
+    output_path = os.path.join(data_dir, output_file)
+    tmp_path = output_path + ".tmp"
+
+    with open(tmp_path, "w") as f:
         json.dump(summary, f, indent=2, default=str)
-    print(f"[+] Full cycle summary saved to {output_file}")
+        f.flush()
+        os.fsync(f.fileno())
+
+    os.replace(tmp_path, output_path)
+    print(f"[+] Full cycle summary saved to {output_path}")

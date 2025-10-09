@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Wi-Fi Roam Cycle</title>
+<style>
+  :root{
+    --bg:#0b0f14;
+    --panel:#0f1520;
+    --panel2:#0c1119;
+    --line:#1f2b3a;
+    --text:#e6f0ff;
+    --muted:#9fb0c6;
+
+    --ok:#25e07b;
+    --warn:#ffd86b;
+    --bad:#ff6c79;
+
+    /* phase colors (fixed) */
+    --ph-auth:#7ccaff;
+    --ph-assoc:#68efc3;
+    --ph-eap:#ffc76a;
+    --ph-4way:#caa6ff;
+
+    --chip:#0e1620;
+    --chipBorder:#273548;
+
+    --shadow: 0 10px 28px rgba(0,0,0,.45);
+    --radius: 12px;
+  }
+
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:14px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;}
+  .container{max-width:1200px;margin:26px auto;padding:0 20px;}
+
+  /* App layout wrappers (for future expansion; self-contained) */
+  #app{display:flex;flex-direction:column;gap:16px;}
+  #headerBar{display:flex;gap:10px;align-items:center;justify-content:space-between;}
+  #reportView{display:flex;flex-direction:column;gap:16px;}
+  #controlPanel{display:none;} /* reserved for future Start Roam controls */
+
+  /* Header buttons */
+  .btn{
+    background:linear-gradient(180deg,#182230,#101822);
+    border:1px solid #273548;border-bottom-color:#1b2735;
+    color:#dce7f7;border-radius:8px;padding:8px 12px;cursor:pointer;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.35)}
+  .btn:active{transform:translateY(0)}
+
+  /* Panels */
+  .panel{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:14px 16px;
+  }
+  .panel h3{
+    margin:0 0 12px 0; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:#cfe0ff; opacity:.92;
+  }
+
+  /* Primary grid (chart + metrics) */
+  .grid{
+    display:grid; grid-template-columns: 2fr 1fr; gap:16px;
+    align-items:stretch; /* make both tiles equal height */
+  }
+  .chartPanel, .metricsPanel{height:100%;}
+  .metricsPanel{display:flex;flex-direction:column;}
+
+  /* Metrics grid */
+  .metrics{
+    display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:2px;
+  }
+  .metric{
+    padding:12px;border:1px solid var(--line);border-radius:10px;
+    background:linear-gradient(180deg,#0a1118,#0b1117);
+  }
+  .metric .label{color:var(--muted);font-size:12px}
+  .metric .value{margin-top:6px;font-size:20px;font-weight:700;letter-spacing:.02em}
+
+  /* Legend chips (click to toggle) */
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .chip{
+    display:inline-flex;align-items:center;gap:8px;border-radius:14px;padding:6px 10px;
+    border:1px solid var(--chipBorder);background:var(--chip);cursor:pointer;user-select:none;
+    transition:.15s; box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+  }
+  .chip:hover{box-shadow:0 0 12px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06)}
+  /* 🔧 Changed: remove glow from legend dots */
+  .dot{width:10px;height:10px;border-radius:2px;box-shadow:none}
+  .dim{opacity:.45}
+
+  /* Chart area (custom SVG) */
+  .chartWrap{position:relative;padding:10px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,#0a1117,#0a0f14)}
+  #chart{width:100%;height:360px;display:block}
+  .axis text{fill:#e8f1ff}                /* white axis labels for dark */
+  .axis line,.axis path{stroke:#243145}
+  /* “Roam #n” chip labels drawn in SVG */
+  .rowChip{font-size:11px;letter-spacing:.06em;dominant-baseline:middle}
+  .chipRect{rx:8}
+  .chipText{fill:#0b1116;font-weight:700}
+  .chipTextLight{fill:#10161e}
+
+  /* Tooltip near cursor */
+  .tip{
+    position:fixed;z-index:9999;pointer-events:none;transform:translate(16px,-16px);
+    min-width:220px;max-width:360px;background:#0b131a;border:1px solid #2d3a49;border-radius:8px;
+    padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.6)
+  }
+  .tip h4{margin:0 0 6px 0;font-size:12px;letter-spacing:.12em;color:#cfe1ff;text-transform:uppercase}
+  .tip p{margin:2px 0;color:#d7e6ff}
+  .tip small{color:#8ea2b6}
+
+  /* Candidates table */
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid #1e2a38}
+  th{color:#a2bad6;font-weight:600;text-transform:uppercase;letter-spacing:.12em;font-size:11px;text-align:left}
+  .rssi{font-weight:700}
+  .rssi.green{color:#25e07b}
+  .rssi.yellow{color:#ffd86b}
+  .rssi.red{color:#ff6c79}
+  .pill{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--chipBorder);border-radius:999px;padding:4px 8px;background:#0b1219;font-size:12px}
+  .pill .dot{width:8px;height:8px;border-radius:999px;box-shadow:none}
+
+  /* Accordion for roams */
+  .accordion{border:1px solid #213042;border-radius:10px;background:linear-gradient(180deg,#0b1117,#090e13);overflow:hidden;margin-bottom:8px;}
+  .accHead{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #172230}
+  .accHead:hover{background:#0b1219}
+  .accHead .status{margin-left:auto;font-weight:700}
+  .accBody{display:none;padding:10px 14px 16px 14px;border-top:1px dashed #1b2838}
+  .accBody.open{display:block}
+  .phaseCard{border:1px solid #1c2a3a;border-radius:10px;padding:12px;margin-top:10px;background:#0a1117}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .muted{color:var(--muted)}
+  .kbd{background:#0e1620;border:1px solid #263447;border-radius:6px;padding:2px 6px}
+
+  /* Header pills */
+  .headerPills{display:flex;flex-wrap:wrap;gap:10px}
+
+  /* 🔧 Spacing normalization: ensure equal spacing between sections */
+  #reportView > .grid { margin-bottom: 30px; }  /* was 16px */
+  #reportView > .panel { margin-top: 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <main id="app">
+    <!-- ===== Header controls ===== -->
+    <header id="headerBar" class="panel" style="display:flex;align-items:center;gap:10px;">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn" id="btnSample">Use sample</button>
+        <label class="btn" for="file">Load JSON</label>
+        <input id="file" type="file" accept="application/json" style="display:none" />
+        <button class="btn" id="btnReset">Reset view</button>
+        <button class="btn" id="btnRunNow" style="background: var(--ok); color: var(--bg);">
+        ▶ Run Now
+        </button>
+        <span id="runStatus" style="margin-left:8px;color:var(--muted);font-size:0.9em;"></span>
+      </div>
+      <!-- Future: quick actions could live here -->
+    </header>
+
+    <!-- ===== Core report view ===== -->
+    <section id="reportView">
+      <div class="grid">
+        <!-- Chart tile -->
+        <div class="panel chartPanel">
+          <h3>Roam Phase Durations (absolute, ms)</h3>
+          <div class="chartWrap">
+            <svg id="chart" aria-label="Roam phase chart"></svg>
+          </div>
+          <div class="legend" id="legend"></div>
+          <div class="muted" style="margin-top:8px">
+            Click legend chips to hide/show a phase. Hover bars for details.
+          </div>
+        </div>
+
+        <!-- Metrics tile (matches chart height) -->
+        <aside class="panel metricsPanel">
+          <h3>Cycle Summary</h3>
+          <div class="headerPills" style="margin-bottom:10px">
+            <div class="pill"><strong>SSID:</strong> <span id="hSsid">—</span></div>
+            <div class="pill"><strong>Security:</strong> <span id="hSec">—</span></div>
+            <div class="pill"><strong>Exec:</strong> <span id="hExec">—</span></div>
+            <div class="pill"><strong>Started:</strong> <span id="hTime">—</span></div>
+          </div>
+          <div class="metrics" style="margin-top:auto">
+            <div class="metric"><div class="label">Roams</div><div class="value" id="mRoams">—</div></div>
+            <div class="metric"><div class="label">Success rate</div><div class="value" id="mSuccess">—</div></div>
+            <div class="metric"><div class="label">Avg total</div><div class="value" id="mAvg">—</div></div>
+            <div class="metric"><div class="label">Median total</div><div class="value" id="mMedian">—</div></div>
+            <div class="metric"><div class="label">Fastest / Slowest</div><div class="value" id="mFS">—</div></div>
+            <div class="metric"><div class="label">SSID Security</div><div class="value" id="mSecType">—</div></div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Candidates table -->
+      <div class="panel">
+        <h3>Candidate Access Points</h3>
+        <div class="muted" style="margin-bottom:6px">Sorted by RSSI (desc)</div>
+        <div style="overflow:auto">
+          <table id="apTable">
+            <thead><tr>
+              <th>BSSID</th><th>Frequency (MHz)</th><th>RSSI (dBm)</th><th>QBSS Util (%)</th><th>QBSS STA Count</th>
+              <th>Auth Suites</th><th>MFP Flag</th><th>Supported Rates</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Roam details -->
+      <div class="panel">
+        <h3>Roam Details</h3>
+        <div id="roams"></div>
+      </div>
+    </section>
+
+    <!-- ===== Future expansion (hidden) ===== -->
+    <section id="controlPanel" class="panel">
+      <!--
+        TODO: Start Roam controls (stub)
+        <form id="startRoamForm">
+          <label>SSID <input name="ssid"></label>
+          <label>Min RSSI <input type="number" name="minRssi" value="-75"></label>
+          <button class="btn" type="button" onclick="startRoam()">Start Roam</button>
+        </form>
+      -->
+    </section>
+  </main>
+</div>
+
+<div id="tooltip" class="tip" style="display:none"></div>
+<!-- ===== Overlay Spinner ===== -->
+<div id="overlay" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(11,15,20,0.9);
+  color:var(--muted);
+  z-index:9999;
+  backdrop-filter: blur(4px);
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:12px;
+">
+  <div class="spinner" style="
+    width:36px;
+    height:36px;
+    border:4px solid var(--line);
+    border-top-color:var(--ok);
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+  "></div>
+  <div id="spinnerText">Running roam...</div>
+  <pre id="logOutput" style="
+    background:#0f1520;
+    color:#d9eaff;
+    font-size:0.85em;
+    padding:12px;
+    max-height:40vh;
+    width:80vw;
+    overflow:auto;
+    border-radius:8px;
+    box-shadow:0 0 12px #0008;
+    text-align:left;
+  "></pre>
+</div>
+
+<style>
+@keyframes spin { from {transform:rotate(0)} to {transform:rotate(360deg)} }
+</style>
+
+<script>
+/*** ---------- sample data (your JSON pasted in) ---------- ***/
+const SAMPLE = {"ssid":"try-a-band","security_type":"SAE","timestamp":"2025-10-08T12:28:22.935081-07:00","execution_duration_s":4.63,"candidates":[{"bssid":"0c:e0:fc:d7:9e:ce","freq":2437,"rssi":-12,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":7.5,"qbss_sta_count":0},{"bssid":"0e:e0:fc:d7:9e:d1","freq":6335,"rssi":-36,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0* 9.0 12.0 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":0.4,"qbss_sta_count":0},{"bssid":"0c:e0:fc:d7:9f:50","freq":2462,"rssi":-45,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":9.0,"qbss_sta_count":0},{"bssid":"0e:e0:fc:d7:9f:51","freq":5745,"rssi":-50,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":4.3,"qbss_sta_count":0},{"bssid":"0e:e0:fc:d7:9f:53","freq":6115,"rssi":-73,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0* 9.0 12.0 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":0.4,"qbss_sta_count":0},{"bssid":"0e:e0:fc:d7:9e:cf","freq":5180,"rssi":-18,"ssid":"try-a-band","auth_suites":["SAE"],"mfp_flag":"MFP-required","supported_rates":"6.0 9.0 12.0* 18.0 24.0 36.0 48.0 54.0","qbss_util_prct":3.1,"qbss_sta_count":1}],"roams":[{"roam_index":1,"target_bssid":"0c:e0:fc:d7:9e:ce","final_bssid":"0c:e0:fc:d7:9e:ce","final_freq":null,"overall_status":"failure","roam_duration_ms":187.54,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:23.100258","end":"2025-10-08 12:28:23.130525","duration_ms":30.27,"status":"success","type":"Open System","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:23.130669","end":"2025-10-08 12:28:23.237970","duration_ms":107.3,"status":"success","type":"reassoc","errors":["Oct 08 12:28:23.169284 kaliLinux wpa_supplicant[857]: wlan0: State: ASSOCIATING -> DISCONNECTED\n","Oct 08 12:28:23.169078 kaliLinux wpa_supplicant[857]: wlan0: CTRL-EVENT-ASSOC-REJECT bssid=0c:e0:fc:d7:9e:ce status_code=53\n"],"details":{"disconnects":"1"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:23.281396","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:23.281498","end":"2025-10-08 12:28:23.287784","duration_ms":6.29,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}},{"roam_index":2,"target_bssid":"0e:e0:fc:d7:9e:d1","final_bssid":"0e:e0:fc:d7:9e:d1","final_freq":"6335","overall_status":"success","roam_duration_ms":177.05,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:23.892110","end":"2025-10-08 12:28:23.983161","duration_ms":91.05,"status":"success","type":"SAE","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:23.983325","end":"2025-10-08 12:28:23.996383","duration_ms":13.06,"status":"success","type":"reassoc","errors":[],"details":{"disconnects":"0"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:24.062413","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:24.062510","end":"2025-10-08 12:28:24.069141","duration_ms":6.63,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}},{"roam_index":3,"target_bssid":"0c:e0:fc:d7:9f:50","final_bssid":"0c:e0:fc:d7:9f:50","final_freq":"2462","overall_status":"success","roam_duration_ms":130.32,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:24.704187","end":"2025-10-08 12:28:24.742612","duration_ms":38.43,"status":"success","type":"SAE","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:24.742771","end":"2025-10-08 12:28:24.754762","duration_ms":11.99,"status":"success","type":"reassoc","errors":[],"details":{"disconnects":"0"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:24.825836","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:24.825924","end":"2025-10-08 12:28:24.834488","duration_ms":8.56,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}},{"roam_index":4,"target_bssid":"0e:e0:fc:d7:9f:51","final_bssid":"0e:e0:fc:d7:9f:51","final_freq":"5745","overall_status":"success","roam_duration_ms":99.82,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:25.520712","end":"2025-10-08 12:28:25.562554","duration_ms":41.84,"status":"success","type":"SAE","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:25.562726","end":"2025-10-08 12:28:25.576902","duration_ms":14.18,"status":"success","type":"reassoc","errors":[],"details":{"disconnects":"0"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:25.615395","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:25.615494","end":"2025-10-08 12:28:25.620510","duration_ms":5.02,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}},{"roam_index":5,"target_bssid":"0e:e0:fc:d7:9f:53","final_bssid":"0e:e0:fc:d7:9f:53","final_freq":"6115","overall_status":"success","roam_duration_ms":241.22,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:26.082252","end":"2025-10-08 12:28:26.234191","duration_ms":151.94,"status":"success","type":"SAE","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:26.234346","end":"2025-10-08 12:28:26.248356","duration_ms":14.01,"status":"success","type":"reassoc","errors":[],"details":{"disconnects":"0"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:26.316663","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:26.316760","end":"2025-10-08 12:28:26.323459","duration_ms":6.7,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}},{"roam_index":6,"target_bssid":"0e:e0:fc:d7:9e:cf","final_bssid":"0e:e0:fc:d7:9e:cf","final_freq":"5180","overall_status":"success","roam_duration_ms":129.37,"phases":{"Authentication":{"name":"Authentication","start":"2025-10-08 12:28:26.925194","end":"2025-10-08 12:28:26.966569","duration_ms":41.38,"status":"success","type":"SAE","errors":[],"details":{"ft_used":"False","pmksa_cache_used":"True"}},"Association":{"name":"Association","start":"2025-10-08 12:28:26.966741","end":"2025-10-08 12:28:26.986300","duration_ms":19.56,"status":"success","type":"reassoc","errors":[],"details":{"disconnects":"0"}},"EAP":{"name":"EAP","start":null,"end":"2025-10-08 12:28:27.047604","duration_ms":null,"status":"success","type":"802.1X","errors":[],"details":{}},"4-Way":{"name":"4-Way","start":"2025-10-08 12:28:27.047688","end":"2025-10-08 12:28:27.054542","duration_ms":6.85,"status":"success","type":"RSN handshake","errors":[],"details":{"pmksa_cache_used":"True"}}}}]};
+
+/*** ---------- state ---------- ***/
+let data = null;
+const PHASES = [
+  {key:"Authentication", label:"Authentication", color:getComputedStyle(document.documentElement).getPropertyValue('--ph-auth').trim() || "#7ccaff"},
+  {key:"Association",    label:"Association",    color:getComputedStyle(document.documentElement).getPropertyValue('--ph-assoc').trim()|| "#68efc3"},
+  {key:"EAP",            label:"EAP",            color:getComputedStyle(document.documentElement).getPropertyValue('--ph-eap').trim()  || "#ffc76a"},
+  {key:"4-Way",          label:"4-Way",          color:getComputedStyle(document.documentElement).getPropertyValue('--ph-4way').trim() || "#caa6ff"}
+];
+let visible = new Set(PHASES.map(p=>p.key));
+
+/*** ---------- helpers ---------- ***/
+const $ = s => document.querySelector(s);
+const fmtMs = n => n==null? "—" : `${(+n).toFixed(2)} ms`;
+const bandStr = f => {
+  if (f==null) return "—";
+  let band = (f<3000?"2.4 GHz":(f<6000?"5 GHz":(f<7000?"6 GHz":"")));
+  return `${f} (${band})`;
+};
+// RSSI colors: green >= -65, yellow >= -72, else red
+const rssiClass = r => (r>=-65 ? "green" : (r>=-72 ? "yellow" : "red"));
+const successRate = roams => {
+  if (!roams?.length) return [0,0];
+  const ok = roams.filter(r=>r.overall_status==="success").length;
+  return [ok, roams.length];
+};
+const median = arr => {
+  if (!arr.length) return 0;
+  const a = [...arr].sort((x,y)=>x-y);
+  const m = Math.floor(a.length/2);
+  return a.length%2? a[m] : (a[m-1]+a[m])/2;
+};
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/*** ---------- file & sample ---------- ***/
+$("#btnSample").onclick = () => loadData(SAMPLE);
+$("#btnReset").onclick  = () => { visible = new Set(PHASES.map(p=>p.key)); renderAll(); }
+$("#file").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { try{ loadData(JSON.parse(r.result)); }catch(err){ alert("Invalid JSON"); } };
+  r.readAsText(f);
+});
+
+/*** ---------- main render pipeline ---------- ***/
+function loadData(d){
+  data = d;
+  renderHeader();
+  renderMetrics();
+  renderTable();
+  renderChart();
+  renderRoams();
+}
+function renderAll(){ renderChart(); }
+
+/*** ---------- header/metrics ---------- ***/
+function renderHeader(){
+  $("#hSsid").textContent = data.ssid ?? "—";
+  $("#hSec").textContent  = data.security_type ?? "—";
+  $("#hExec").textContent = (data.execution_duration_s!=null? `${data.execution_duration_s.toFixed(2)} s`:"—");
+  $("#hTime").textContent = data.timestamp ?? "—";
+  $("#mSecType").textContent = data.security_type ?? "—";
+}
+function renderMetrics(){
+  const [ok,total] = successRate(data.roams||[]);
+  $("#mRoams").textContent   = total;
+  $("#mSuccess").textContent = total? `${Math.round((ok/total)*100)}%` : "—";
+  const totals = (data.roams||[]).map(r=>+r.roam_duration_ms||0);
+  $("#mAvg").textContent     = totals.length? `${(totals.reduce((a,b)=>a+b,0)/totals.length).toFixed(2)} ms`:"—";
+  $("#mMedian").textContent  = totals.length? `${median(totals).toFixed(2)} ms`:"—";
+  if (totals.length){
+    const fast = Math.min(...totals).toFixed(2);
+    const slow = Math.max(...totals).toFixed(2);
+    $("#mFS").textContent = `${fast} ms / ${slow} ms`;
+  } else $("#mFS").textContent = "—";
+}
+
+/*** ---------- candidates table ---------- ***/
+function renderTable(){
+  const tb = $("#apTable tbody");
+  tb.innerHTML = "";
+  const rows = (data.candidates||[]).slice().sort((a,b)=>(b.rssi??-999)-(a.rssi??-999));
+  for (const c of rows){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${c.bssid??"—"}</td>
+      <td>${bandStr(c.freq)}</td>
+      <td class="rssi ${rssiClass(+c.rssi)}">${c.rssi}</td>
+      <td>${c.qbss_util_prct ?? "—"}</td>
+      <td>${c.qbss_sta_count ?? "—"}</td>
+      <td>${(c.auth_suites||[]).map(s=>`<span class="pill"><span class="dot" style="background:${cssVar('--ph-auth')||'#7ccaff'}"></span>${s}</span>`).join(" ") || "—"}</td>
+      <td><span class="pill"><span class="dot" style="background:${c.mfp_flag?.includes("required")? "#ff9e66":"#8bd8ff"}"></span>${c.mfp_flag ?? "—"}</span></td>
+      <td class="muted">${c.supported_rates ?? "—"}</td>`;
+    tb.appendChild(tr);
+  }
+}
+
+/*** ---------- chart (SVG stacked bars) ---------- ***/
+function renderChart(){
+  const svg = $("#chart");
+  svg.innerHTML = "";
+
+  const padL=110, padR=20, padT=18, padB=32;
+  const W = svg.clientWidth, H = svg.clientHeight;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+
+  // Build items from roams
+  const roams = (data.roams||[]);
+  const items = roams.map((r,i)=>{
+    const segs = [];
+    for (const p of PHASES){
+      const ph = r.phases?.[p.key];
+      const dur = ph?.duration_ms ?? 0;
+      segs.push({
+        k:p.key,label:p.label,dur:+dur,color:p.color,status:ph?.status,type:ph?.type,
+        target:r.target_bssid, rssi: findRssi(r.target_bssid)
+      });
+    }
+    const total = segs.reduce((s,x)=>s+(x.dur||0),0);
+    return {index:r.roam_index,total,segs,status:r.overall_status,target:r.target_bssid,freq:r.final_freq};
+  });
+
+  const maxX = Math.max(1, ...items.map(d=>d.total));
+
+  // x grid + labels (white text)
+  for (let i=0;i<=4;i++){
+    const x = padL + (i/4)*plotW;
+    const gl = document.createElementNS(svg.namespaceURI,"line");
+    gl.setAttribute("x1",x);gl.setAttribute("x2",x);
+    gl.setAttribute("y1",padT);gl.setAttribute("y2",padT+plotH);
+    gl.setAttribute("stroke","#213045");gl.setAttribute("stroke-width","1");
+    svg.appendChild(gl);
+    const lbl = document.createElementNS(svg.namespaceURI,"text");
+    lbl.setAttribute("x",x); lbl.setAttribute("y",H-10);
+    lbl.setAttribute("text-anchor","middle");
+    lbl.setAttribute("fill","#e8f1ff");
+    lbl.textContent = `${Math.round((i/4)*maxX)} ms`;
+    svg.appendChild(lbl);
+  }
+
+  // rows + bars + left “Roam #” chips
+  const rowH = plotH/Math.max(1,items.length), barH = Math.max(14,rowH-12);
+  items.forEach((d,rowIdx)=>{
+    const y = padT + rowIdx*rowH + (rowH-barH)/2;
+
+    // Chip background color by roam status
+    const statusColor = (d.status==="success"? cssVar('--ok'): cssVar('--bad')) || "#25e07b";
+    // Draw chip (rounded rect + text)
+    const chipGroup = document.createElementNS(svg.namespaceURI,"g");
+    // rect
+    const rect = document.createElementNS(svg.namespaceURI,"rect");
+    rect.setAttribute("x", 14);
+    rect.setAttribute("y", y + (barH-20)/2);
+    rect.setAttribute("width", 78);
+    rect.setAttribute("height", 20);
+    rect.setAttribute("rx", 10);
+    rect.setAttribute("fill", statusColor);
+    rect.setAttribute("opacity", "0.9");
+    chipGroup.appendChild(rect);
+    // text
+    const t = document.createElementNS(svg.namespaceURI,"text");
+    t.setAttribute("x", 53);
+    t.setAttribute("y", y + barH/2 + 1);
+    t.setAttribute("text-anchor","middle");
+    t.setAttribute("class","rowChip chipTextLight");
+    t.textContent = `Roam #${d.index}`;
+    chipGroup.appendChild(t);
+    svg.appendChild(chipGroup);
+
+    // stacked bars
+    let cursor = 0;
+    d.segs.forEach(seg=>{
+      if (!visible.has(seg.k) || !seg.dur) return;
+      const w = (seg.dur/maxX)*plotW;
+      const r = document.createElementNS(svg.namespaceURI,"rect");
+      r.setAttribute("x", padL + cursor);
+      r.setAttribute("y", y);
+      r.setAttribute("width", Math.max(0,w));
+      r.setAttribute("height", barH);
+      r.setAttribute("rx",4); r.setAttribute("fill", seg.color);
+      r.setAttribute("opacity", seg.status==="success"? "1":"0.9");
+      r.addEventListener("mousemove", (ev)=>{
+        showTip(ev.clientX, ev.clientY, `
+          <h4>Roam #${d.index} · ${seg.status||"—"}</h4>
+          <p><strong>AP</strong> ${d.target||"—"} · <strong>${seg.type||seg.k}</strong></p>
+          <p>RSSI: ${seg.rssi ?? "—"} · Phase: <strong>${seg.label}</strong> = ${fmtMs(seg.dur)}</p>
+          <small>Total: ${fmtMs(d.total)}</small>
+        `);
+      });
+      r.addEventListener("mouseleave", hideTip);
+      svg.appendChild(r);
+      cursor += w;
+    });
+  });
+
+  // legend with toggles (re-render)
+  const leg = $("#legend"); leg.innerHTML="";
+  for (const p of PHASES){
+    const chip = document.createElement("div");
+    chip.className = "chip"+(visible.has(p.key)?"":" dim");
+    chip.innerHTML = `<span class="dot" style="background:${p.color}"></span>${p.label}`;
+    chip.onclick = ()=>{ visible.has(p.key)? visible.delete(p.key) : visible.add(p.key); renderChart(); };
+    leg.appendChild(chip);
+  }
+}
+
+function showTip(x,y,html){
+  const t = $("#tooltip"); t.innerHTML = html; t.style.display="block";
+  const pad = 24, vw = window.innerWidth, vh = window.innerHeight;
+  const rect = t.getBoundingClientRect();
+  let tx = x + 16, ty = y + 16;
+  if (tx + rect.width + pad > vw) tx = vw - rect.width - pad;
+  if (ty + rect.height + pad > vh) ty = vh - rect.height - pad;
+  t.style.left = tx + "px"; t.style.top = ty + "px";
+}
+function hideTip(){ $("#tooltip").style.display="none"; }
+
+function findRssi(bssid){
+  const c = (data.candidates||[]).find(x=>x.bssid===bssid);
+  return c?.rssi ?? null;
+}
+
+/*** ---------- roam details (accordion) ---------- ***/
+function renderRoams(){
+  const wrap = $("#roams"); wrap.innerHTML="";
+  for (const r of (data.roams||[])){
+    const acc = document.createElement("div"); acc.className="accordion";
+    const head = document.createElement("div"); head.className="accHead";
+    head.innerHTML = `
+      <div class="pill" style="background:${r.overall_status==='success'? 'rgba(37,224,123,.12)':'rgba(255,108,121,.12)'};border-color:#2a394b;">
+        <span class="dot" style="background:${r.overall_status==='success'? cssVar('--ok'):cssVar('--bad')}"></span>
+        Roam #${r.roam_index}
+      </div>
+      <div><span class="muted">AP</span> ${r.target_bssid || r.final_bssid || "—"} <span class="muted">·</span> Total <strong>${fmtMs(r.roam_duration_ms)}</strong></div>
+      <div class="status ${r.overall_status==="success"?"ok":"bad"}">${r.overall_status}</div>`;
+    const body = document.createElement("div"); body.className="accBody";
+    const phases = ["Authentication","Association","EAP","4-Way"];
+    phases.forEach(k=>{
+      const ph=r.phases?.[k]; if(!ph) return;
+      const card = document.createElement("div"); card.className="phaseCard";
+      const errs = (ph.errors||[]);
+      card.innerHTML = `
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <strong>${ph.name}</strong>
+          <span class="${ph.status==="success"?"ok":"bad"}">${ph.status}</span>
+          <span class="muted">Type:</span> <span>${ph.type||"—"}</span>
+          <span class="muted">· Duration:</span> <span>${fmtMs(ph.duration_ms)}</span>
+        </div>
+        ${Object.keys(ph.details||{}).length? `<div class="muted" style="margin-top:6px">${Object.entries(ph.details).map(([k,v])=>`${k}: <span class="kbd">${v}</span>`).join(" · ")}</div>`:""}
+        ${errs.length? `<details style="margin-top:8px"><summary>Errors (${errs.length})</summary><pre style="white-space:pre-wrap;max-height:240px;overflow:auto;margin:6px 0 0 0;color:#d9eaff">${errs.join("")}</pre></details>`:""}
+      `;
+      body.appendChild(card);
+    });
+    head.onclick = ()=> body.classList.toggle("open");
+    acc.append(head,body);
+    wrap.appendChild(acc);
+  }
+}
+function showOverlay(msg="Running roam...") {
+  document.getElementById('overlay').style.display = 'flex';
+  document.getElementById('spinnerText').textContent = msg;
+  document.getElementById('logOutput').textContent = "";
+}
+
+function hideOverlay() {
+  document.getElementById('overlay').style.display = 'none';
+}
+/*** ---------- init ---------- ***/
+loadData(SAMPLE);
+</script>
+<script>
+const runBtn = document.getElementById('btnRunNow');
+const statusLabel = document.getElementById('runStatus');
+
+runBtn.addEventListener('click', async () => {
+  runBtn.disabled = true;
+  statusLabel.textContent = "";
+  showOverlay();
+
+  try {
+    const startRes = await fetch('/api/start_roam', { method: 'POST' });
+    const startData = await startRes.json();
+    console.log("Roam started:", startData);
+
+    // Begin polling for logs and summary
+    pollLogs();
+    await pollForSummary();
+
+  } catch (err) {
+    console.error(err);
+    statusLabel.textContent = "Error starting roam.";
+  } finally {
+    runBtn.disabled = false;
+    hideOverlay();
+  }
+});
+
+let lastLogLength = 0;
+
+async function pollLogs() {
+  const logBox = document.getElementById('logOutput');
+  lastLogLength = 0;
+  for (let i = 0; i < 300; i++) { // 5 min max
+    const res = await fetch(`/api/logs?nocache=${Date.now()}`);
+    if (res.ok) {
+      const { log } = await res.json();
+      if (log.length > lastLogLength) {
+        const newPart = log.slice(lastLogLength);
+        logBox.textContent += newPart;
+        logBox.scrollTop = logBox.scrollHeight;
+        lastLogLength = log.length;
+      }
+    }
+    await new Promise(r => setTimeout(r, 1000));
+    if (statusLabel.textContent.includes("complete")) break;
+  }
+}
+
+async function pollForSummary() {
+  const maxWait = 120; // seconds
+  const pollInterval = 3; // seconds
+
+  // Get current mtime before starting new roam
+  let baselineMtime = 0;
+  try {
+    const res = await fetch('/api/latest_cycle_summary');
+    if (res.ok) {
+      const payload = await res.json();
+      baselineMtime = payload.mtime || 0;
+      console.log("Baseline mtime before roam:", baselineMtime);
+    }
+  } catch (err) {
+    console.warn("No existing summary baseline found, starting fresh.");
+  }
+
+  // Now poll until a new file appears
+  for (let i = 0; i < maxWait / pollInterval; i++) {
+    const res = await fetch(`/api/latest_cycle_summary?nocache=${Date.now()}`); // prevent browser caching
+    if (res.ok) {
+      const payload = await res.json();
+      const { mtime, data } = payload;
+
+      // ✅ Only trigger if mtime is newer than the baseline
+      if (mtime > baselineMtime) {
+        window.lastSummaryMtime = mtime;
+        console.log("Got NEW cycle summary:", data);
+        renderCycleSummary(data);
+        statusLabel.textContent = "Roam complete ✅";
+        setTimeout(() => { statusLabel.textContent = ""; }, 10000);
+        return;
+      }
+    }
+
+    console.log("Waiting for new roam data...");
+    await new Promise(r => setTimeout(r, pollInterval * 1000));
+  }
+
+  statusLabel.textContent = "Timed out waiting for roam.";
+}
+function renderCycleSummary(summary) {
+  console.log("Rendering new roam data:", summary);
+  window.data = summary;
+  loadData(summary);
+}
+</script>
+</body>
+</html>
