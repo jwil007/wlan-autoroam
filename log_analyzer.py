@@ -161,7 +161,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
         "roam_fail_log":       (["-> DISCONNECTED"], False),
         "auth_type_log":       (["* Auth Type"], False),
-        "auth_err_logs":       (["CTRL-EVENT-AUTH-REJECT"], True),
+        "auth_err_logs":       (["CTRL-EVENT-AUTH-REJECT",re.compile(r"Authentication with ([0-9a-f]{2}:){5}[0-9a-f]{2} timed out", re.I)], True),
         "auth_start_log":      (["nl80211: Authentication request send successfully",
                                  "CTRL_IFACE ROAM "], False),
         "auth_complete_log":   (["State: AUTHENTICATING -> ASSOCIATING","State: COMPLETED -> ASSOCIATING"], False),
@@ -192,7 +192,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
     raw = LogAnalysisRaw()
 
     for line in logs:
-        for attr, (markers, allow_multiple) in LOG_MARKERS.items():
+        for attr, (markers, allow_multiple, regexes) in LOG_MARKERS.items():
             for priority, marker in enumerate(markers):
                 if marker in line:
                     if allow_multiple:
@@ -205,7 +205,19 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
                             setattr(raw, attr, line)
                             setattr(raw, f"{attr}_priority", priority)
                     break
-    return raw
+
+            # --- Regex markers (added after normal strings, lower priority than all)
+            if regexes:
+                for pattern in regexes:
+                    if re.search(pattern, line):
+                        if allow_multiple:
+                            getattr(raw, attr).append(line)
+                        else:
+                            existing = getattr(raw, attr)
+                            # Regex hits come *after* string markers, so we assign only if unset
+                            if existing is None:
+                                setattr(raw, attr, line)
+                        break
 
 #Helper to extract timestamp
 def parse_ts_from_line(line: str, year: int) -> datetime | None:
