@@ -46,6 +46,7 @@ def build_cycle_summary(
             "final_freq": getattr(derived, "final_freq", None),
             "overall_status": "success" if not getattr(derived, "disconnect_bool", False) else "failure",
             "roam_duration_ms": round(getattr(derived, "roam_duration_ms", 0.0) or 0, 2),
+            "failure_log": derived.failure_log,
             "phases": phases
         })
 

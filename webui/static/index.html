@@ -133,7 +133,31 @@
   .phaseCard{border:1px solid #1c2a3a;border-radius:10px;padding:12px;margin-top:10px;background:#0a1117}
   .ok{color:var(--ok)} .bad{color:var(--bad)} .muted{color:var(--muted)}
   .kbd{background:#0e1620;border:1px solid #263447;border-radius:6px;padding:2px 6px}
+  .accHead .statusGroup {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
+.accHead .statusGroup .status {
+  margin-left: 0;
+}
+/* Fix alignment between success and failure rows */
+.accHead .statusGroup {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* ensures both stick to far right */
+  gap: 8px;
+  min-width: 100px; /* keep spacing consistent with success items */
+}
+
+.accHead .statusGroup .status {
+  margin-left: 0;
+  min-width: 60px; /* approximate width of "success" text */
+  text-align: right;
+}
   /* Header pills */
   .headerPills{display:flex;flex-wrap:wrap;gap:10px}
 
@@ -202,7 +226,31 @@ button:disabled,
   border-color: var(--line);
 }
 
+.btnDownloadRoam {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 0.8em;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btnDownloadRoam:hover {
+  background: var(--panel2);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.statusWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
+.statusWrap .status {
+  flex-shrink: 0;
+}
 
 </style>
 </head>
@@ -592,12 +640,20 @@ function renderRoams(){
     const acc = document.createElement("div"); acc.className="accordion";
     const head = document.createElement("div"); head.className="accHead";
     head.innerHTML = `
-      <div class="pill" style="background:${r.overall_status==='success'? 'rgba(37,224,123,.12)':'rgba(255,108,121,.12)'};border-color:#2a394b;">
-        <span class="dot" style="background:${r.overall_status==='success'? cssVar('--ok'):cssVar('--bad')}"></span>
+      <div class="pill" style="background:${r.overall_status==='success' ? 'rgba(37,224,123,.12)' : 'rgba(255,108,121,.12)'};border-color:#2a394b;">
+        <span class="dot" style="background:${r.overall_status==='success' ? cssVar('--ok') : cssVar('--bad')}"></span>
         Roam #${r.roam_index}
       </div>
       <div><span class="muted">AP</span> ${r.target_bssid || r.final_bssid || "—"} <span class="muted">·</span> Total <strong>${fmtMs(r.roam_duration_ms)}</strong></div>
-      <div class="status ${r.overall_status==="success"?"ok":"bad"}">${r.overall_status}</div>`;
+      <div class="statusGroup">
+        ${r.overall_status === "failure" && r.failure_log ? `
+          <button class="btnDownloadRoam" data-filename="${r.failure_log}">
+            Download log file
+          </button>
+        ` : ""}
+        <div class="status ${r.overall_status === "success" ? "ok" : "bad"}">${r.overall_status}</div>
+      </div>
+    `;
     const body = document.createElement("div"); body.className="accBody";
     const phases = ["Authentication","Association","EAP","4-Way"];
     phases.forEach(k=>{
@@ -619,6 +675,45 @@ function renderRoams(){
     head.onclick = ()=> body.classList.toggle("open");
     acc.append(head,body);
     wrap.appendChild(acc);
+    // Attach event listeners for dynamically created download buttons
+    // Attach event listeners for dynamically created download buttons
+    wrap.querySelectorAll('.btnDownloadRoam').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation(); // prevent accordion toggle
+
+        // ✅ Use filename directly from JSON
+        const filename = btn.dataset.filename;
+        if (!filename) {
+          console.warn("No filename associated with this button");
+          alert("No log file found for this roam.");
+          return;
+        }
+
+        console.log("Downloading failed roam log:", filename);
+
+        try {
+          const res = await fetch(`/api/download_log?filename=${encodeURIComponent(filename)}`);
+          if (!res.ok) {
+            alert("No log file found for this roam.");
+            return;
+          }
+
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+        } catch (err) {
+          console.error("Failed to download roam log:", err);
+          alert("Failed to download log.");
+        }
+      });
+    });
+
   }
 }
 function showOverlay(msg="Running roam...") {
@@ -649,8 +744,15 @@ debugCheck.addEventListener('change', () => {
 debugFile.disabled = true;
 debugFile.style.opacity = '0.4';
 
+let roamInProgress = false;
 
 runBtn.addEventListener('click', async () => {
+  if (roamInProgress) {
+    console.warn("🚫 Roam already in progress — ignoring click");
+    return;
+  }
+
+  roamInProgress = true;
   runBtn.disabled = true;
   statusLabel.textContent = "";
   showOverlay();
@@ -660,13 +762,8 @@ runBtn.addEventListener('click', async () => {
   const rssi = parseInt(document.getElementById('rssi').value.trim() || "-75", 10);
   const debugEnabled = document.getElementById('debugCheck').checked;
   const debugFile = document.getElementById('debugFile').value.trim() || "roam_debug.log";
-  
 
-  const payload = {
-    iface,
-    rssi,
-    debug: debugEnabled ? debugFile : null
-  };
+  const payload = { iface, rssi, debug: debugEnabled ? debugFile : null };
 
   try {
     const startRes = await fetch('/api/start_roam', {
@@ -675,19 +772,28 @@ runBtn.addEventListener('click', async () => {
       body: JSON.stringify(payload)
     });
     const startData = await startRes.json();
-    console.log("Roam started with args:", payload, startData);
+    console.log("▶ Roam started with args:", payload, startData);
 
-    pollLogs();
+    const logsPromise = pollLogs();
     await pollForSummary();
 
+    if (logPollController) {
+      logPollController.abort();
+      logPollController = null;
+    }
+
+    await logsPromise;
+
   } catch (err) {
-    console.error(err);
+    console.error("❌ Error starting roam:", err);
     statusLabel.textContent = "Error starting roam.";
   } finally {
     runBtn.disabled = false;
+    roamInProgress = false;
     hideOverlay();
   }
 });
+
 
 
 // --- Global state for log polling ---

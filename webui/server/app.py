@@ -65,14 +65,25 @@ def get_logs():
 
 @app.route('/api/download_log')
 def download_log():
-    log_dir = os.path.join(BASE_DIR, "data")
-    filename = request.args.get("filename", "roam_debug.log")  # default if not provided
-    log_path = os.path.join(log_dir, os.path.basename(filename))  # sanitize input
+    filename = request.args.get("filename", "roam_debug.log")
+    safe_name = os.path.basename(filename)  # prevent path traversal
 
-    if not os.path.exists(log_path):
-        return jsonify({"error": f"Log file not found: {filename}"}), 404
+    # Primary log directories
+    data_dir = os.path.join(BASE_DIR, "data")
+    fail_dir = os.path.join(data_dir, "failed_roams")
 
-    return send_file(log_path, as_attachment=True)
+    # Check both possible locations
+    candidate_paths = [
+        os.path.join(data_dir, safe_name),
+        os.path.join(fail_dir, safe_name),
+    ]
+
+    for path in candidate_paths:
+        if os.path.exists(path):
+            return send_file(path, as_attachment=True)
+
+    # If nothing found
+    return jsonify({"error": f"Log file not found: {filename}"}), 404
 
 @app.route('/api/log_exists')
 def log_exists():

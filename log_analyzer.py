@@ -69,6 +69,7 @@ class LogAnalysisDerived:
     ft_success: bool | None = None
     noconfig_err: bool | None = None
     notarget_err: bool | None = None
+    failure_log: str | None = None 
 
 def pretty_print_derived(derived: LogAnalysisDerived) -> str:
     def fmt(val, fmt_str="{:.2f}"):
@@ -350,24 +351,20 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
 
     return derived
 
-def save_failed_roam_logs(chunk: list[str], derived: 'LogAnalysisDerived', index: int):
+def save_failed_roam_logs(chunk: list[str], derived: 'LogAnalysisDerived', index: int) -> str:
     """
     Save logs for failed roam chunks into data/failed_roams/.
     Filename example:
       roam_fail_173523_roam3_06e0fcd79ed0.log
+    Returns: The filename of the saved log, or None if failed.
     """
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__)))
     fail_dir = os.path.join(repo_root, "data", "failed_roams")
     os.makedirs(fail_dir, exist_ok=True)
 
-    # Short timestamp: HHMMSS for compact uniqueness
-    ts = datetime.now().strftime("%H%M%S")
-
-    # Sanitize BSSID: remove colons if present
+    ts = datetime.now().strftime("%H%M%S")  # short timestamp
     target = derived.roam_target_bssid or "unknown"
     safe_bssid = target.replace(":", "").lower()
-
-    # Build readable filename
     fname = f"roam_fail_{ts}_roam{index}_{safe_bssid}.log"
     path = os.path.join(fail_dir, fname)
 
@@ -375,8 +372,10 @@ def save_failed_roam_logs(chunk: list[str], derived: 'LogAnalysisDerived', index
         with open(path, "w") as f:
             f.writelines(line if line.endswith("\n") else line + "\n" for line in chunk)
         print(f"[!] Saved failed roam logs to {path}")
+        return fname  #  return just the filename (not full path)
     except Exception as e:
         print(f"[x] Failed to save failed roam logs: {e}")
+        return None
 
         
 def analyze_all_roams(collected: CollectedLogs) -> list[tuple[LogAnalysisDerived, LogAnalysisRaw]]:
@@ -391,16 +390,23 @@ def analyze_all_roams(collected: CollectedLogs) -> list[tuple[LogAnalysisDerived
         derived = derive_metrics(raw)
         results.append((derived, raw))
 
-        # --- NEW: save failed roam logs ---
+        # --- Detect failed roams ---
         roam_failed = (
             derived.roam_fail_time is not None
             or not derived.roam_end_time
-            or derived.noconfig_err
-            or derived.notarget_err
-            or derived.disconnect_bool
+            or getattr(derived, "noconfig_err", False)
+            or getattr(derived, "notarget_err", False)
+            or getattr(derived, "disconnect_bool", False)
         )
-        if roam_failed:
-            save_failed_roam_logs(chunk, derived, i)
 
+        if roam_failed:
+            failure_filename = save_failed_roam_logs(chunk, derived, i)
+            if failure_filename:
+                derived.failure_log = failure_filename
+                print(f"[+] Attached failure log filename to roam {i}: {failure_filename}")
+            else:
+                derived.failure_log = None
+        else:
+            derived.failure_log = None
 
     return results
