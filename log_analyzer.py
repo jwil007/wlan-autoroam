@@ -157,7 +157,6 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
     LOG_MARKERS: dict[str, tuple[list[str], bool]] = {
         "iface_control_start": (["CTRL_IFACE ROAM "], False),
         "roam_start_log":      (["nl80211: Authentication request send successfully",
-                                 "nl80211: Connect request send successfully",
                                  "CTRL_IFACE ROAM "], False),
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
         "roam_fail_log":       (["-> DISCONNECTED"], False),
