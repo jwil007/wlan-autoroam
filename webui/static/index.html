@@ -663,7 +663,11 @@ function renderRoams(){
       card.innerHTML = `
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <strong>${ph.name}</strong>
-          <span class="${ph.status==="success"?"ok":"bad"}">${ph.status}</span>
+          <span class="${
+              ph.status === "success" ? "ok" :
+              (ph.status === "N/A" || ph.status === "unknown") ? "muted" :
+              "bad"
+            }">${ph.status}</span>
           <span class="muted">Type:</span> <span>${ph.type||"—"}</span>
           <span class="muted">· Duration:</span> <span>${fmtMs(ph.duration_ms)}</span>
         </div>

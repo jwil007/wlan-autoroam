@@ -51,7 +51,7 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
             start=derived.roam_start_time,
             end=derived.auth_complete_time,
             duration_ms=fmt(derived.auth_duration_ms),
-            status="success" if derived.auth_complete_time else "unknown",
+            status = "failure" if derived.auth_disco_time else ("success" if derived.auth_complete_time else "unknown"),
             type=derived.auth_type or "unknown",
             errors=[],
             details={
@@ -64,7 +64,7 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
             start=derived.assoc_start_time,
             end=derived.assoc_complete_time,
             duration_ms=fmt(derived.assoc_duration_ms),
-            status="success" if derived.assoc_complete_time else "unknown",
+            status = "failure" if derived.assoc_disco_time else ("success" if derived.assoc_complete_time else "unknown"),
             type="reassoc" if derived.assoc_start_time else "unknown",
             errors=[],
             details={"disconnects": str(derived.disconnect_count or 0)},

@@ -44,9 +44,11 @@ class LogAnalysisDerived:
     auth_type: str | None = None
     auth_start_time: datetime | None = None
     auth_complete_time: datetime | None = None
+    auth_disco_time: datetime | None = None
     auth_duration_ms: datetime | None = None
     assoc_start_time: float | None = None
     assoc_complete_time: datetime | None = None
+    assoc_disco_time: datetime | None = None
     assoc_duration_ms: float | None = None
     final_freq: int | None = None
     roam_start_time: datetime | None = None
@@ -55,6 +57,7 @@ class LogAnalysisDerived:
     wpa_params: str | None = None
     fourway_start_time: datetime | None = None
     fourway_success_time: datetime | None = None
+    fourway_disco_time: datetime | None = None
     fourway_duration_ms: float | None = None
     eap_type: str | None = None
     eap_start_time: datetime | None = None
@@ -116,25 +119,34 @@ def split_into_roams(logs: list[str]) -> list[list[str]]:
     """
     Split raw logs into per-roam chunks based on the ROAM command.
     Each chunk starts with 'CTRL_IFACE ROAM <MAC>'.
+    If a line containing '-> DISCONNECTED' appears, the current chunk closes immediately.
     """
     chunks: list[list[str]] = []
     current_chunk: list[str] = []
 
-    # Regex: CTRL_IFACE ROAM followed by a MAC address
     roam_start_re = re.compile(r"CTRL_IFACE ROAM ([0-9a-f]{2}(:[0-9a-f]{2}){5})", re.IGNORECASE)
+    disconnect_re = re.compile(r"-> DISCONNECTED", re.IGNORECASE)
 
     for line in logs:
+        # Start of a new roam
         if roam_start_re.search(line):
-            # If we already have a chunk, close it before starting a new one
             if current_chunk:
                 chunks.append(current_chunk)
-            # Start a new chunk
             current_chunk = [line]
-        else:
-            if current_chunk:  # only collect lines if inside a roam
-                current_chunk.append(line)
+            continue
 
-    # Append the final chunk (if any)
+        # Stop collecting this roam when disconnect is seen
+        if current_chunk and disconnect_re.search(line):
+            current_chunk.append(line)
+            chunks.append(current_chunk)
+            current_chunk = []  # reset after disconnect
+            continue
+
+        # Otherwise, keep adding to the current chunk
+        if current_chunk:
+            current_chunk.append(line)
+
+    # Append the final chunk if it didn’t end with a disconnect
     if current_chunk:
         chunks.append(current_chunk)
 
@@ -223,10 +235,13 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
         "roam_fail_time":      ("roam_fail_log", False),
         "auth_start_time":     ("auth_start_log", False),
         "auth_complete_time":  ("auth_complete_log", False),
+        "auth_disco_time":     ("auth_disco_log", False),
         "assoc_start_time":    ("assoc_start_log", False),
         "assoc_complete_time": ("assoc_complete_log", False),
+        "assoc_disco_time":    ("assoc_disco_log", False),
         "fourway_start_time":  ("fourway_start_log", False),
         "fourway_success_time":("fourway_success_log", False),
+        "fourway_disco_time":  ("fourway_disco_log", False),
         "eap_start_time":      ("eap_start_logs", True),
         "eap_success_time":    ("eap_success_logs", True),
         "eap_failure_time":    ("eap_failure_logs", True),
@@ -242,24 +257,34 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
 
     #total roam duration
     if derived.roam_start_time:
-        if derived.roam_end_time:
-            duration = derived.roam_end_time - derived.roam_start_time
-            derived.roam_duration_ms = duration.total_seconds() * 1000
-        elif derived.roam_fail_time:
+        if derived.roam_fail_time:
             duration = derived.roam_fail_time - derived.roam_start_time
             derived.roam_duration_ms = duration.total_seconds() * 1000
+        elif derived.roam_end_time:
+            duration = derived.roam_end_time - derived.roam_start_time
+            derived.roam_duration_ms = duration.total_seconds() * 1000
+    
     #4way duration
     if derived.fourway_start_time and derived.fourway_success_time:
         duration = derived.fourway_success_time - derived.fourway_start_time
         derived.fourway_duration_ms = duration.total_seconds() * 1000
     #auth duration
-    if derived.roam_start_time and derived.auth_complete_time:
-        duration = derived.auth_complete_time - derived.roam_start_time
-        derived.auth_duration_ms = duration.total_seconds() * 1000
+    if derived.auth_start_time:
+        if derived.auth_disco_time:
+            duration = derived.auth_disco_time - derived.auth_start_time
+            derived.auth_duration_ms = duration.total_seconds() * 1000
+        elif derived.auth_complete_time:
+            duration = derived.auth_complete_time - derived.auth_start_time
+            derived.auth_duration_ms = duration.total_seconds() * 1000
     #assoc duration
-    if derived.assoc_start_time and derived.assoc_complete_time:
-        duration = derived.assoc_complete_time - derived.assoc_start_time
-        derived.assoc_duration_ms = duration.total_seconds() * 1000
+    if derived.assoc_start_time:
+        if derived.assoc_disco_time:
+            duration = derived.assoc_disco_time - derived.assoc_start_time
+            derived.assoc_duration_ms = duration.total_seconds() * 1000
+        elif derived.assoc_complete_time:
+            duration = derived.assoc_complete_time - derived.assoc_start_time
+            derived.assoc_duration_ms = duration.total_seconds() * 1000
+
     # --- EAP duration ---
     if raw.eap_start_logs:
         start_ts = raw.eap_start_logs[0][:22]
