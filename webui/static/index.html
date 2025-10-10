@@ -654,28 +654,52 @@ function renderRoams(){
         <div class="status ${r.overall_status === "success" ? "ok" : "bad"}">${r.overall_status}</div>
       </div>
     `;
-    const body = document.createElement("div"); body.className="accBody";
+const body = document.createElement("div");
+body.className = "accBody";
+
+// --- Add details (above the phases)
+if (r.details && Object.keys(r.details).length) {
+  const detailsDiv = document.createElement("div");
+  detailsDiv.className = "roamDetailsInline";
+  detailsDiv.innerHTML = `
+    <div style="margin-bottom:10px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+      ${Object.entries(r.details)
+        .map(([k,v]) => `<span class="muted">${k}:</span> <span class="kbd">${v}</span>`)
+        .join("<span class='muted'>·</span> ")}
+    </div>
+  `;
+  body.appendChild(detailsDiv);
+}
+
+    // --- Existing phase cards ---
     const phases = ["Authentication","Association","EAP","4-Way"];
     phases.forEach(k=>{
-      const ph=r.phases?.[k]; if(!ph) return;
-      const card = document.createElement("div"); card.className="phaseCard";
+      const ph = r.phases?.[k];
+      if(!ph) return;
+
+      const card = document.createElement("div");
+      card.className = "phaseCard";
       const errs = (ph.errors||[]);
       card.innerHTML = `
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <strong>${ph.name}</strong>
-          <span class="${
-              ph.status === "success" ? "ok" :
-              (ph.status === "N/A" || ph.status === "unknown") ? "muted" :
-              "bad"
-            }">${ph.status}</span>
+          <span class="${ph.status==="success"?"ok":(ph.status==="N/A"||ph.status==="unknown"?"muted":"bad")}">${ph.status}</span>
           <span class="muted">Type:</span> <span>${ph.type||"—"}</span>
           <span class="muted">· Duration:</span> <span>${fmtMs(ph.duration_ms)}</span>
         </div>
-        ${Object.keys(ph.details||{}).length? `<div class="muted" style="margin-top:6px">${Object.entries(ph.details).map(([k,v])=>`${k}: <span class="kbd">${v}</span>`).join(" · ")}</div>`:""}
-        ${errs.length? `<details style="margin-top:8px"><summary>Errors (${errs.length})</summary><pre style="white-space:pre-wrap;max-height:240px;overflow:auto;margin:6px 0 0 0;color:#d9eaff">${errs.join("")}</pre></details>`:""}
+        ${Object.keys(ph.details||{}).length
+          ? `<div class="muted" style="margin-top:6px">${Object.entries(ph.details)
+              .map(([k,v])=>`${k}: <span class="kbd">${v}</span>`).join(" · ")}</div>`
+          : ""}
+        ${errs.length
+          ? `<details style="margin-top:8px"><summary>Errors (${errs.length})</summary>
+            <pre style="white-space:pre-wrap;max-height:240px;overflow:auto;margin:6px 0 0 0;color:#d9eaff">
+            ${errs.join("")}</pre></details>`
+          : ""}
       `;
       body.appendChild(card);
     });
+
     head.onclick = ()=> body.classList.toggle("open");
     acc.append(head,body);
     wrap.appendChild(acc);

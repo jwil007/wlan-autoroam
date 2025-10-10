@@ -54,10 +54,7 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
             status = "failure" if derived.auth_disco_time else ("success" if derived.auth_complete_time else "unknown"),
             type=derived.auth_type or "unknown",
             errors=[],
-            details={
-                "ft_used": str(derived.ft_success),
-                "pmksa_cache_used": str(derived.pmksa_cache_used),
-            },
+            details={},
         ),
         PhaseResult(
             name="Association",
@@ -67,7 +64,7 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
             status = "failure" if derived.assoc_disco_time else ("success" if derived.assoc_complete_time else "unknown"),
             type="reassoc" if derived.assoc_start_time else "unknown",
             errors=[],
-            details={"disconnects": str(derived.disconnect_count or 0)},
+            details={},
         ),
         PhaseResult(
             name="EAP",
@@ -85,12 +82,10 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
             start=derived.fourway_start_time,
             end=derived.fourway_success_time,
             duration_ms=fmt(derived.fourway_duration_ms),
-            status="success" if derived.fourway_success_time else "unknown",
+            status = "failure" if derived.fourway_disco_time else ("success" if derived.fourway_success_time else "unknown"),
             type="RSN handshake",
             errors=[],
-            details={
-                "pmksa_cache_used": str(derived.pmksa_cache_used),
-            },
+            details={},
         ),
     ]
 

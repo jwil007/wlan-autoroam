@@ -47,6 +47,11 @@ def build_cycle_summary(
             "overall_status": "success" if not getattr(derived, "disconnect_bool", False) else "failure",
             "roam_duration_ms": round(getattr(derived, "roam_duration_ms", 0.0) or 0, 2),
             "failure_log": derived.failure_log,
+            "details": {
+                "ft_used": str(derived.ft_success),
+                "pmksa_cache_used": str(derived.pmksa_cache_used),
+                "disconnects": str(derived.disconnect_count or 0)
+            },
             "phases": phases
         })
 
