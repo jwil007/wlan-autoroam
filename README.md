@@ -7,6 +7,7 @@ A UI is presented on a simple HTTP webpage for quick analysis of log results.
 1. Graphs broken out by phase (Auth, Assoc, EAP, 4way handshake) for timing comparison.
 2. Details for each roam, including relevent error logs in a text box on the UI.
 3. If a roam fails, logs are automatically saved, and you can download from the web UI.
+4. JSON upload if you happen to have the right file format (you don't). 
 
 
 ## Requirements
