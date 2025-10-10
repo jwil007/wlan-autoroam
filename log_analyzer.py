@@ -192,9 +192,12 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
     raw = LogAnalysisRaw()
 
     for line in logs:
-        for attr, (markers, allow_multiple, regexes) in LOG_MARKERS.items():
+        for attr, (markers, allow_multiple) in LOG_MARKERS.items():
             for priority, marker in enumerate(markers):
-                if marker in line:
+                # Handle both literal strings and regex markers
+                if (isinstance(marker, str) and marker in line) or \
+                (isinstance(marker, re.Pattern) and marker.search(line)):
+
                     if allow_multiple:
                         getattr(raw, attr).append(line)
                     else:
@@ -204,20 +207,9 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
                         if existing is None or priority < existing_prio:
                             setattr(raw, attr, line)
                             setattr(raw, f"{attr}_priority", priority)
-                    break
 
-            # --- Regex markers (added after normal strings, lower priority than all)
-            if regexes:
-                for pattern in regexes:
-                    if re.search(pattern, line):
-                        if allow_multiple:
-                            getattr(raw, attr).append(line)
-                        else:
-                            existing = getattr(raw, attr)
-                            # Regex hits come *after* string markers, so we assign only if unset
-                            if existing is None:
-                                setattr(raw, attr, line)
-                        break
+                    # stop checking other markers for this attribute once matched
+                    break
     return raw
 
 #Helper to extract timestamp
