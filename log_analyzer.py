@@ -218,6 +218,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
                             if existing is None:
                                 setattr(raw, attr, line)
                         break
+    return raw
 
 #Helper to extract timestamp
 def parse_ts_from_line(line: str, year: int) -> datetime | None:
