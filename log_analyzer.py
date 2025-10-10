@@ -164,7 +164,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "auth_err_logs":       (["CTRL-EVENT-AUTH-REJECT"], True),
         "auth_start_log":      (["nl80211: Authentication request send successfully",
                                  "CTRL_IFACE ROAM "], False),
-        "auth_complete_log":   (["State: AUTHENTICATING -> ASSOCIATING"], False),
+        "auth_complete_log":   (["State: AUTHENTICATING -> ASSOCIATING","State: COMPLETED -> ASSOCIATING"], False),
         "assoc_err_logs":      (["CTRL-EVENT-ASSOC-REJECT"], True), 
         "assoc_start_log":     (["nl80211: Association request send successfully",
                                  "nl80211: Connect request send successfully"], False),
