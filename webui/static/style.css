@@ -1,0 +1,238 @@
+/* ======================
+   THEME VARIABLES
+====================== */
+:root{
+  --bg:#0b0f14;
+  --panel:#0f1520;
+  --panel2:#0c1119;
+  --line:#1f2b3a;
+  --text:#e6f0ff;
+  --muted:#9fb0c6;
+
+  --ok:#25e07b;
+  --warn:#ffd86b;
+  --bad:#ff6c79;
+
+  /* phase colors (fixed) */
+  --ph-auth:#7ccaff;
+  --ph-assoc:#68efc3;
+  --ph-eap:#ffc76a;
+  --ph-4way:#caa6ff;
+
+  --chip:#0e1620;
+  --chipBorder:#273548;
+
+  --shadow: 0 10px 28px rgba(0,0,0,.45);
+  --radius: 12px;
+}
+
+/* ======================
+   BASE LAYOUT & TYPO
+====================== */
+html,body{
+  height:100%;
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:14px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+}
+.container{max-width:1200px;margin:26px auto;padding:0 20px;}
+#app{display:flex;flex-direction:column;gap:16px;}
+#headerBar{display:flex;gap:10px;align-items:center;justify-content:space-between;}
+#reportView{display:flex;flex-direction:column;gap:16px;}
+#controlPanel{display:none;}
+
+/* ======================
+   BUTTONS
+====================== */
+.btn{
+  background:linear-gradient(180deg,#182230,#101822);
+  border:1px solid #273548;border-bottom-color:#1b2735;
+  color:#dce7f7;border-radius:8px;padding:8px 12px;cursor:pointer;
+  transition:transform .12s, box-shadow .12s;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,0,0,.35)}
+.btn:active{transform:translateY(0)}
+button:disabled,
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: none;
+  transition: none;
+  background: var(--panel2);
+  color: var(--muted);
+  border-color: var(--line);
+}
+
+/* ======================
+   PANELS & SECTION HEADERS
+====================== */
+.panel{
+  background:linear-gradient(180deg,var(--panel),var(--panel2));
+  border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:14px 16px;
+}
+.panel h3{
+  margin:0 0 12px 0; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+  color:#cfe0ff; opacity:.92;
+}
+
+/* ======================
+   PRIMARY GRID (Chart + Metrics)
+====================== */
+.grid{
+  display:grid; grid-template-columns: 2fr 1fr; gap:16px;
+  align-items:stretch;
+}
+.chartPanel, .metricsPanel{height:100%;}
+.metricsPanel{display:flex;flex-direction:column;}
+
+/* ======================
+   METRICS GRID
+====================== */
+.metrics{
+  display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:2px;
+}
+.metric{
+  padding:12px;border:1px solid var(--line);border-radius:10px;
+  background:linear-gradient(180deg,#0a1118,#0b1117);
+}
+.metric .label{color:var(--muted);font-size:12px}
+.metric .value{margin-top:6px;font-size:20px;font-weight:700;letter-spacing:.02em}
+
+/* ======================
+   LEGEND CHIPS
+====================== */
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.chip{
+  display:inline-flex;align-items:center;gap:8px;border-radius:14px;padding:6px 10px;
+  border:1px solid var(--chipBorder);background:var(--chip);cursor:pointer;user-select:none;
+  transition:.15s; box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+}
+.chip:hover{box-shadow:0 0 12px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06)}
+.dot{width:10px;height:10px;border-radius:2px;box-shadow:none}
+.dim{opacity:.45}
+
+/* ======================
+   CHART AREA (SVG)
+====================== */
+.chartWrap{position:relative;padding:10px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,#0a1117,#0a0f14)}
+#chart{width:100%;height:360px;display:block}
+.axis text{fill:#e8f1ff}
+.axis line,.axis path{stroke:#243145}
+.rowChip{font-size:11px;letter-spacing:.06em;dominant-baseline:middle}
+.chipTextLight{fill:#10161e}
+
+/* ======================
+   TOOLTIP
+====================== */
+.tip{
+  position:fixed;z-index:9999;pointer-events:none;transform:translate(16px,-16px);
+  min-width:220px;max-width:360px;background:#0b131a;border:1px solid #2d3a49;border-radius:8px;
+  padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.6)
+}
+.tip h4{margin:0 0 6px 0;font-size:12px;letter-spacing:.12em;color:#cfe1ff;text-transform:uppercase}
+.tip p{margin:2px 0;color:#d7e6ff}
+.tip small{color:#8ea2b6}
+
+/* ======================
+   TABLES
+====================== */
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #1e2a38}
+th{color:#a2bad6;font-weight:600;text-transform:uppercase;letter-spacing:.12em;font-size:11px;text-align:left}
+.rssi{font-weight:700}
+.rssi.green{color:#25e07b}
+.rssi.yellow{color:#ffd86b}
+.rssi.red{color:#ff6c79}
+.pill{
+  display:inline-flex;gap:6px;align-items:center;border:1px solid var(--chipBorder);border-radius:999px;padding:4px 8px;background:#0b1219;font-size:12px
+}
+.pill .dot{width:8px;height:8px;border-radius:999px;box-shadow:none}
+
+/* ======================
+   ACCORDION
+====================== */
+.accordion{border:1px solid #213042;border-radius:10px;background:linear-gradient(180deg,#0b1117,#090e13);overflow:hidden;margin-bottom:8px;}
+.accHead{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #172230}
+.accHead:hover{background:#0b1219}
+.accHead .status{margin-left:auto;font-weight:700}
+.accBody{display:none;padding:10px 14px 16px 14px;border-top:1px dashed #1b2838}
+.accBody.open{display:block}
+.phaseCard{border:1px solid #1c2a3a;border-radius:10px;padding:12px;margin-top:10px;background:#0a1117}
+.ok{color:var(--ok)} .bad{color:var(--bad)} .muted{color:var(--muted)}
+.kbd{background:#0e1620;border:1px solid #263447;border-radius:6px;padding:2px 6px}
+
+.accHead .statusGroup{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  min-width:100px;
+}
+.accHead .statusGroup .status{
+  margin-left:0;
+  min-width:60px;
+  text-align:right;
+}
+
+/* ======================
+   HEADER PILLS
+====================== */
+.headerPills{display:flex;flex-wrap:wrap;gap:10px}
+
+/* ======================
+   SPACING
+====================== */
+#reportView > .grid { margin-bottom: 30px; }
+#reportView > .panel { margin-top: 0; }
+
+/* ======================
+   TOGGLE SWITCH
+====================== */
+.toggle{position:relative;display:inline-block;width:40px;height:20px;}
+.toggle input{opacity:0;width:0;height:0;}
+.slider{
+  position:absolute;cursor:pointer;inset:0;
+  background-color:var(--line);border-radius:20px;transition:.3s;
+}
+.slider:before{
+  position:absolute;content:"";height:14px;width:14px;left:3px;bottom:3px;
+  background-color:var(--muted);transition:.3s;border-radius:50%;
+}
+.toggle input:checked + .slider{background-color:var(--ok);}
+.toggle input:checked + .slider:before{transform:translateX(20px);background-color:var(--bg);}
+
+/* ======================
+   FORMS
+====================== */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;appearance:textfield;}
+
+/* ======================
+   DOWNLOAD BUTTON
+====================== */
+.btnDownloadRoam{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--text);
+  font-size:0.8em;
+  padding:2px 8px;
+  border-radius:6px;
+  margin-left:8px;
+  cursor:pointer;
+  transition:all 0.2s ease;
+}
+.btnDownloadRoam:hover{
+  background:var(--panel2);
+  border-color:var(--ok);
+  color:var(--ok);
+}
+
+/* ======================
+   ANIMATIONS
+====================== */
+@keyframes spin { from {transform:rotate(0)} to {transform:rotate(360deg)} }

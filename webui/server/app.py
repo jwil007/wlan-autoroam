@@ -9,11 +9,11 @@ LOG_FILE = os.path.join(BASE_DIR, "data", "current_run.log")
 MAIN_SCRIPT = os.path.join(BASE_DIR, "main.py")
 
 
-app = Flask(__name__, static_folder=STATIC_DIR)
+app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 
 @app.route('/')
 def index():
-    return send_from_directory(STATIC_DIR, 'index.html')
+    return app.send_static_file('index.html')
 
 
 @app.route('/api/start_roam', methods=['POST'])
