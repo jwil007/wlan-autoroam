@@ -54,7 +54,7 @@ def parse_iw_scan_output(iw_output: str,
 
         # Initialize fields
         freq = rssi = qbss_sta_count = None
-        qbss_util = None
+        qbss_util_prct = None
         ssid = supported_rates = mfp_flag = None
         auth_suites: list[str] = []
 

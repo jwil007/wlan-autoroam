@@ -389,7 +389,8 @@ def save_failed_roam_logs(chunk: list[str], derived: 'LogAnalysisDerived', index
       roam_fail_173523_roam3_06e0fcd79ed0.log
     Returns: The filename of the saved log, or None if failed.
     """
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+    here = os.path.abspath(os.path.dirname(__file__))
+    repo_root = os.path.abspath(os.path.join(here, ".."))
     fail_dir = os.path.join(repo_root, "data", "failed_roams")
     os.makedirs(fail_dir, exist_ok=True)
 

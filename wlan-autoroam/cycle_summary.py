@@ -61,7 +61,8 @@ def build_cycle_summary(
 def save_cycle_summary(summary: Dict, output_file: str = "cycle_summary.json"):
     """Write full cycle summary to the repo's data directory."""
     # Correct root is the directory where this script resides
-    repo_root = os.path.abspath(os.path.dirname(__file__))
+    here = os.path.abspath(os.path.dirname(__file__))
+    repo_root = os.path.abspath(os.path.join(here, ".."))
     data_dir = os.path.join(repo_root, "data")
     os.makedirs(data_dir, exist_ok=True)
 

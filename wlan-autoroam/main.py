@@ -174,7 +174,8 @@ def main():
     # ----------------------------------------
     # Optional: save raw logs for debug
     # ----------------------------------------
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+    here = os.path.abspath(os.path.dirname(__file__))
+    repo_root = os.path.abspath(os.path.join(here, ".."))
     data_dir = os.path.join(repo_root, "data")
     os.makedirs(data_dir, exist_ok=True)
 
