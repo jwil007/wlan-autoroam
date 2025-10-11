@@ -15,3 +15,4 @@ data/banana.log
 data/failed_roams/
 webui/static/backuphtml.html
 webui/static/backuphtml2.html
+data/current_run.log
