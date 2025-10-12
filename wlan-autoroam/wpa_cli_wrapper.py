@@ -4,6 +4,7 @@ import time
 from dataclasses import dataclass, field
 import re
 from typing import List
+from iw_scan_parser import parse_iw_scan_output, ParsedScanResults
 
 #This code contains the wpa_cli commands to get current SSID, get scan list, and initiate roams.
 
@@ -17,131 +18,6 @@ class CurrentConnectionInfo:
     ssid: str | None = None
     bssid: str | None = None
 
-@dataclass
-class ParsedScanResults:
-    bssid: str | None = None
-    freq: int | None = None
-    rssi: int | None = None
-    auth_suites: list[str] = field(default_factory=list)
-    mfp_flag: str | None = None
-    supported_rates: str | None = None
-    qbss_util_prct: float | None = None
-    qbss_sta_count: int | None = None
-    ssid: str | None = None
-
-
-def parse_iw_scan_output(iw_output: str,
-                         ssid_filter: str | None = None,
-                         mrssi: int = -100) -> List[ParsedScanResults]:
-    """
-    Parse 'iw dev <iface> scan' output into structured results.
-    """
-    DEBUG_PARSE = False  # toggle this to False later
-
-    results: List[ParsedScanResults] = []
-
-    # Split blocks robustly (each "BSS ..." starts a new section)
-    blocks = re.split(r"(?m)^\s*(?=BSS\s+[0-9A-Fa-f:]{17}\b)", iw_output)
-    for raw_block in blocks:
-        if not raw_block.strip():
-            continue
-
-        lines = raw_block.strip().splitlines()
-        bssid_match = re.match(r"BSS\s+([0-9a-f:]{17})", lines[0])
-        if not bssid_match:
-            continue
-        bssid = bssid_match.group(1)
-
-        # Initialize fields
-        freq = rssi = qbss_sta_count = None
-        qbss_util_prct = None
-        ssid = supported_rates = mfp_flag = None
-        auth_suites: list[str] = []
-
-        for line in lines:
-            line = line.strip()
-            if DEBUG_PARSE and (
-                "freq:" in line or
-                "signal:" in line or
-                "SSID:" in line or
-                "Authentication suites:" in line or
-                "Capabilities:" in line or
-                "station count:" in line or
-                "channel utilisation:" in line
-            ):
-                print(f"[{bssid}] {line}")
-
-            if line.startswith("freq:"):
-                try:
-                    freq = int(float(line.split()[1]))
-                except Exception:
-                    pass
-
-            elif line.startswith("signal:"):
-                try:
-                    rssi = int(float(line.split()[1]))
-                except Exception:
-                    pass
-
-            elif line.startswith("SSID:"):
-                ssid = line.split("SSID:")[1].strip()
-
-            elif line.startswith("Supported rates:"):
-                supported_rates = line.split("Supported rates:")[1].strip()
-
-            elif "Authentication suites:" in line:
-                suites = line.split("Authentication suites:")[1].strip()
-                auth_suites.extend(suites.split())
-
-            elif "Capabilities:" in line and "PTKSA" in line:
-                if "MFP-required" in line:
-                    mfp_flag = "MFP-required"
-                elif "MFP-capable" in line:
-                    mfp_flag = "MFP-capable"
-                elif mfp_flag is None:
-                    mfp_flag = "No MFP"
-
-                # debug only: scoped to a single BSS block
-                if ssid and (not ssid_filter or ssid == ssid_filter):
-                    print(f"[{ssid}] {line}")
-
-            elif "station count:" in line:
-                match = re.search(r"\*?\s*station count:\s*(\d+)", line)
-                if match:
-                    qbss_sta_count = int(match.group(1))
-
-            elif "channel utilisation:" in line:
-                match = re.search(r"\*?\s*channel utilisation:\s*(\d+)/255", line)
-                if match:
-                    qbss_util_prct = round((int(match.group(1)) / 255) * 100, 1)
-
-        # Debug what the filter check looks like
-        if DEBUG_PARSE:
-            print(f"Filter check → ssid={ssid!r}, ssid_filter={ssid_filter!r}, rssi={rssi}")
-
-        # Filter: match SSID (case-insensitive, ignore stray whitespace)
-        if (
-            ssid
-            and (not ssid_filter or ssid.strip().lower() == ssid_filter.strip().lower())
-            and rssi is not None
-            and rssi >= mrssi
-        ):
-            results.append(
-                ParsedScanResults(
-                    bssid=bssid,
-                    freq=freq,
-                    rssi=rssi,
-                    ssid=ssid,
-                    auth_suites=auth_suites,
-                    mfp_flag=mfp_flag,
-                    supported_rates=supported_rates,
-                    qbss_util_prct=qbss_util_prct,
-                    qbss_sta_count=qbss_sta_count,
-                )
-            )
-
-    print(f"[DEBUG] Parsed {len(results)} BSS entries after filtering\n")
-    return results
 
 #Set log level DEBUG - needed for log parsing.
 def set_log_level(iface: str, level = str) -> tuple[bool, str | None]:
@@ -244,20 +120,6 @@ def get_scan_results(
         non_current = [res for res in results if res.bssid != current_bssid]
         current = [res for res in results if res.bssid == current_bssid]
         results = non_current + current
-
-    # --- Print summary for debug ---
-    # print("\n=== Parsed iw scan results ===\n")
-    # for ap in results:
-    #     print(f"BSSID: {ap.bssid}")
-    #     print(f"  SSID:             {ap.ssid}")
-    #     print(f"  Freq:             {ap.freq} MHz")
-    #     print(f"  RSSI:             {ap.rssi} dBm")
-    #     print(f"  Supported rates:  {ap.supported_rates}")
-    #     print(f"  Auth suites:      {', '.join(ap.auth_suites) if ap.auth_suites else 'N/A'}")
-    #     print(f"  MFP flag:         {ap.mfp_flag}")
-    #     print(f"  QBSS util prct:   {ap.qbss_util_prct if ap.qbss_util_prct is not None else 'N/A'}%")
-    #     print(f"  QBSS STA count:   {ap.qbss_sta_count if ap.qbss_sta_count is not None else 'N/A'}\n")
-    # print("====================================\n")
 
     return results
 
