@@ -13,8 +13,8 @@ import json
 import time
 from datetime import datetime
 from typing import List, Dict, Optional
-from log_analyzer import LogAnalysisDerived, LogAnalysisRaw
-from phase_breakout import analyze_from_derived
+from autoroam.log_analyzer import LogAnalysisDerived, LogAnalysisRaw
+from autoroam.phase_breakout import analyze_from_derived
 
 
 def build_cycle_summary(

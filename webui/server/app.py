@@ -1,12 +1,13 @@
 # server/app.py
 from flask import Flask, jsonify, send_from_directory, request, Response, send_file
 import subprocess, os, json, time
+from autoroam.common import get_repo_root, get_log_file_path, get_data_dir, get_failed_roams_dir
 
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+BASE_DIR = get_repo_root()
 STATIC_DIR = os.path.join(BASE_DIR, "webui", "static")
-LOG_FILE = os.path.join(BASE_DIR, "data", "current_run.log")
-MAIN_SCRIPT = os.path.join(BASE_DIR, "wlan-autoroam","main.py")
+LOG_FILE = get_log_file_path()
+MAIN_SCRIPT = os.path.join(BASE_DIR, "autoroam","main.py")
 
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
@@ -42,10 +43,11 @@ def start_roam():
 
     return jsonify({"status": "started", "cmd": cmd})
 
-
+#gets json output which fills out data on the UI. 
 @app.route('/api/latest_cycle_summary')
 def latest_summary():
-    path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "cycle_summary.json"))
+    data_dir = get_data_dir()
+    path = os.path.join(data_dir, "cycle_summary.json")
     if not os.path.exists(path):
         print(f"[WARN] JSON not found at {path}")
         return jsonify({"error": "No summary found yet"}), 404
@@ -55,6 +57,7 @@ def latest_summary():
         data = json.load(f)
     return jsonify({"mtime": mtime, "data": data})
 
+#this is the stdout when running the script, not wpa_supplicant logs... sorry
 @app.route('/api/logs')
 def get_logs():
     if not os.path.exists(LOG_FILE):
@@ -63,14 +66,15 @@ def get_logs():
         lines = f.read()
     return jsonify({"log": lines})
 
+#This will download logs with a specified file name. Works for full debug logs and failed roam logs. 
 @app.route('/api/download_log')
 def download_log():
     filename = request.args.get("filename", "roam_debug.log")
     safe_name = os.path.basename(filename)  # prevent path traversal
 
     # Primary log directories
-    data_dir = os.path.join(BASE_DIR, "data")
-    fail_dir = os.path.join(data_dir, "failed_roams")
+    data_dir = get_data_dir()
+    fail_dir = get_failed_roams_dir()
 
     # Check both possible locations
     candidate_paths = [
@@ -85,11 +89,13 @@ def download_log():
     # If nothing found
     return jsonify({"error": f"Log file not found: {filename}"}), 404
 
+#this is a check to see if the optional debug log file exists
 @app.route('/api/log_exists')
 def log_exists():
-    log_dir = os.path.join(BASE_DIR, "data")
+    data_dir = get_data_dir()
     filename = request.args.get("filename", "roam_debug.log")
-    log_path = os.path.join(log_dir, os.path.basename(filename))
+    log_path = os.path.join(data_dir, os.path.basename(filename))
+
 
     exists = os.path.exists(log_path)
     return jsonify({"exists": exists})

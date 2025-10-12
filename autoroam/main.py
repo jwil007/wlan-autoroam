@@ -3,17 +3,19 @@ import time
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from log_collector import CollectedLogs, collect_logs, stop_log_collection
-from log_analyzer import analyze_all_roams, pretty_print_derived
-from wpa_cli_wrapper import (
+#imports for internal packages
+from autoroam.common import get_data_dir
+from autoroam.log_collector import CollectedLogs, collect_logs, stop_log_collection
+from autoroam.log_analyzer import analyze_all_roams
+from autoroam.shell_cmd_wrapper import (
     set_log_level,
     restore_log_level,
     get_current_connection,
     get_scan_results,
     roam_to_bssid,
 )
-from phase_breakout import analyze_from_derived, save_phase_breakout
-from cycle_summary import build_cycle_summary, save_cycle_summary
+from autoroam.phase_breakout import analyze_from_derived
+from autoroam.cycle_summary import build_cycle_summary, save_cycle_summary
 
 
 def wait_for_connected(collected: CollectedLogs, start_index: int, timeout: float = 20.0) -> bool:
@@ -33,9 +35,7 @@ def wait_for_connected(collected: CollectedLogs, start_index: int, timeout: floa
 
 
 def main():
-    # ----------------------------------------
     # CLI Arguments
-    # ----------------------------------------
     parser = argparse.ArgumentParser(description="Wi-Fi Roam Test Tool")
     parser.add_argument("-i", "--iface", default="wlan0", help="Wi-Fi interface to use")
     parser.add_argument("-r", "--rssi", type=int, default=-75, help="Minimum RSSI filter")
@@ -49,10 +49,7 @@ def main():
     iface = args.iface
     min_rssi = args.rssi
 
-
-    # ----------------------------------------
     # Configure wpa_supplicant logging
-    # ----------------------------------------
     log_set_result, original_log_level = set_log_level(iface, "DEBUG")
     if not log_set_result:
         print("Failed to set log level to DEBUG")
@@ -62,9 +59,7 @@ def main():
     proc = collect_logs(collected)
 
     try:
-        # ----------------------------------------
         # Identify current connection
-        # ----------------------------------------
         current = get_current_connection(iface)
         if not current.ssid or not current.bssid:
             print("Wi-Fi interface is not connected to a WLAN.")
@@ -73,9 +68,7 @@ def main():
         print(f"Current SSID:  {current.ssid}")
         print(f"Current BSSID: {current.bssid}\n")
 
-        # ----------------------------------------
         # Gather candidate APs for roaming
-        # ----------------------------------------
         candidates = get_scan_results(
             iface=iface,
             mrssi=min_rssi,
@@ -89,15 +82,11 @@ def main():
         print("")
 
 
-        # ----------------------------------------
         # Track start time for the entire test cycle
-        # ----------------------------------------
         cycle_start = time.time()
         cycle_start_ts = datetime.now().astimezone().isoformat()
 
-        # ----------------------------------------
         # Attempt roams
-        # ----------------------------------------
         for target in candidates:
             print(f"\n>>> Roaming to {target.bssid} (RSSI {target.rssi} dBm, {target.freq} MHz)")
             start_index = len(collected.raw_logs)
@@ -109,9 +98,7 @@ def main():
             else:
                 print(f"Roam to {target.bssid} timed out or failed")
 
-        # ----------------------------------------
         # Analyze collected logs
-        # ----------------------------------------
         print("\n================== Post-Roam Analysis ==================\n")
         results = analyze_all_roams(collected)  # → returns list[(derived, raw)]
 
@@ -130,10 +117,8 @@ def main():
                         f"Errors: {len(pdata['errors'])}"
                     )
 
-        # ----------------------------------------
+
         # Build the full cycle summary JSON
-        # ----------------------------------------
-        # Derive security type from scanned candidates, not log analysis
         if candidates and any(c.auth_suites for c in candidates):
             security_types = sorted({suite for c in candidates for suite in c.auth_suites})
             security_type = ", ".join(security_types)
@@ -171,13 +156,8 @@ def main():
         stop_log_collection(proc)
         restore_log_level(iface, original_log_level)
 
-    # ----------------------------------------
     # Optional: save raw logs for debug
-    # ----------------------------------------
-    here = os.path.abspath(os.path.dirname(__file__))
-    repo_root = os.path.abspath(os.path.join(here, ".."))
-    data_dir = os.path.join(repo_root, "data")
-    os.makedirs(data_dir, exist_ok=True)
+    data_dir = get_data_dir()
 
     if args.debug:
         try:

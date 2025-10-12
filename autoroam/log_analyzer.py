@@ -1,5 +1,6 @@
-from log_collector import CollectedLogs
+from autoroam.log_collector import CollectedLogs
 import os
+from common import get_failed_roams_dir
 from datetime import datetime
 from dataclasses import dataclass, field
 import re
@@ -389,10 +390,7 @@ def save_failed_roam_logs(chunk: list[str], derived: 'LogAnalysisDerived', index
       roam_fail_173523_roam3_06e0fcd79ed0.log
     Returns: The filename of the saved log, or None if failed.
     """
-    here = os.path.abspath(os.path.dirname(__file__))
-    repo_root = os.path.abspath(os.path.join(here, ".."))
-    fail_dir = os.path.join(repo_root, "data", "failed_roams")
-    os.makedirs(fail_dir, exist_ok=True)
+    fail_dir = get_failed_roams_dir()
 
     ts = datetime.now().strftime("%H%M%S")  # short timestamp
     target = derived.roam_target_bssid or "unknown"

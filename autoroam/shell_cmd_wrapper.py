@@ -1,12 +1,12 @@
 import subprocess
 from time import sleep
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import re
 from typing import List
-from iw_scan_parser import parse_iw_scan_output, ParsedScanResults
+from autoroam.iw_scan_parser import parse_iw_scan_output, ParsedScanResults
 
-#This code contains the wpa_cli commands to get current SSID, get scan list, and initiate roams.
+#Various shell commands live here
 
 #Set variables for interface and min rssi threshold. May refactor later.
 interface = "wlan0"

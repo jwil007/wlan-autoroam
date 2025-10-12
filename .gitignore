@@ -9,10 +9,6 @@ roam_debug.log
 roam_old.py
 sae.log
 sample_results.pkl
-data/apple.log
-data/apple1.log
-data/banana.log
-data/failed_roams/
+data
 webui/static/backuphtml.html
 webui/static/backuphtml2.html
-data/current_run.log

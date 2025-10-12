@@ -11,7 +11,7 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import Optional, List, Dict
 import json
-from log_analyzer import LogAnalysisDerived, LogAnalysisRaw
+from autoroam.log_analyzer import LogAnalysisDerived, LogAnalysisRaw
 
 
 # ============================================================
