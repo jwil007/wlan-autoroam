@@ -15,12 +15,12 @@ A Linux device with a Wi-Fi interface connect to an SSID. Python3, iw, wpa_cli, 
 
 # Usage
 ## Launch UI
- `python3 autoroam_ui.py -p 8080`
+ `python3 start_autoroam_ui.py -p 8080`
 #### Optional args:
 `-p, --port` HTTP port to launch webserver on. Default is 8080.
 
 ## Run from CLI:
-`python3 autoroam_cli.py -i wlan0 -r -75 -d "roam_debug.log"`
+`python3 start_autoroam_cli.py -i wlan0 -r -75 -d "roam_debug.log"`
  
  #### Optional args:
  
