@@ -1,26 +1,24 @@
 # wlan-autoroam
 This project uses native Linux tools (iw, wpa_cli, wpa_supplicant, and journalctl) to automatically scan and roam (reassociate) to BSSIDs in your ESS. It checks the current SSID you are connected to and identifies candidate APs to roam to above a configurable RSSI threshold. The roaming process is sequenced in descending order of RSSI, with the final roam being a return to the original BSSID.
 
-A web UI is hosted on the local machine via HTTP - you can start the roam process and view the results directly in the web UI. You can also run the script directly to view results in stdout. Files (json output, raw logs) are saved in the data directory, which is created automatically if it is not present. 
+#### There are two startup scripts:
+1. `start_autoroam_ui.py` - Starts a web UI via HTTP on localhost. The web UI is fully featured, in that you can start the roam, view results, and download logs from it.
+2. `start_autoroam_cli.py` - Runs the roam cycle a single time from your shell. Stdout will print basic results, detailed output (json for all roams, debug logs, logs for failed roams) is saved to the data directory, which is automatically.
 
-### UI Features:
-1. Graphs broken out by phase (Auth, Assoc, EAP, 4way handshake) for timing comparison.
-2. Details for each roam, including relevent error logs in a text box on the UI.
-3. If a roam fails, logs are automatically saved, and you can download from the web UI.
-4. JSON upload if you happen to have the right file format (you don't). 
+
 
 
 ### Requirements:
-A Linux device with a Wi-Fi interface connect to an SSID. Python3, iw, wpa_cli, wpa_supplicant, and journalctl.
+A Linux device with a Wi-Fi interface connected to an SSID. Python3, iw, wpa_cli, wpa_supplicant, and journalctl.
 
 # Usage
 ## Launch UI
- `python3 start_autoroam_ui.py -p 8080`
+ `python3 start_autoroam_ui.py`
 #### Optional args:
 `-p, --port` HTTP port to launch webserver on. Default is 8080.
 
 ## Run from CLI:
-`python3 start_autoroam_cli.py -i wlan0 -r -75 -d "roam_debug.log"`
+`python3 start_autoroam_cli.py`
  
  #### Optional args:
  
