@@ -7,7 +7,7 @@ from autoroam.common import get_repo_root, get_log_file_path, get_data_dir, get_
 BASE_DIR = get_repo_root()
 STATIC_DIR = os.path.join(BASE_DIR, "webui", "static")
 LOG_FILE = get_log_file_path()
-MAIN_SCRIPT = os.path.join(BASE_DIR, "autoroam","main.py")
+MAIN_SCRIPT = os.path.join(BASE_DIR, "start_autoroam_cli.py")
 
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
@@ -101,6 +101,7 @@ def log_exists():
     return jsonify({"exists": exists})
 
 
-if __name__ == '__main__':
-    print("Starting Flask server...")
-    app.run(host="0.0.0.0", port=8080, debug=True)
+def run_server(port=8080):
+    """Run the Flask server on the specified port."""
+    print(f"Starting webserver at http://localhost:{port}")
+    app.run(host="0.0.0.0", port=port, debug=True)

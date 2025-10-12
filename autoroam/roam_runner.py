@@ -34,20 +34,7 @@ def wait_for_connected(collected: CollectedLogs, start_index: int, timeout: floa
     return False
 
 
-def main():
-    # CLI Arguments
-    parser = argparse.ArgumentParser(description="Wi-Fi Roam Test Tool")
-    parser.add_argument("-i", "--iface", default="wlan0", help="Wi-Fi interface to use")
-    parser.add_argument("-r", "--rssi", type=int, default=-75, help="Minimum RSSI filter")
-    parser.add_argument(
-        "-d", "--debug",
-        nargs="?", const="roam_debug.log", metavar="FILE",
-        help="Save raw collected logs to a file (default: roam_debug.log if no FILE provided)",
-    )
-    args = parser.parse_args()
-
-    iface = args.iface
-    min_rssi = args.rssi
+def run_roam_cycle(iface="wlan0", min_rssi=-75, debug_file=None):
 
     # Configure wpa_supplicant logging
     log_set_result, original_log_level = set_log_level(iface, "DEBUG")
@@ -159,10 +146,10 @@ def main():
     # Optional: save raw logs for debug
     data_dir = get_data_dir()
 
-    if args.debug:
+    if debug_file:
         try:
             # Ensure the debug path lives in /data
-            debug_path = os.path.join(data_dir, os.path.basename(args.debug))
+            debug_path = os.path.join(data_dir, os.path.basename(debug_file))
             with open(debug_path, "w") as f:
                 f.writelines(collected.raw_logs)
             print(f"[+] Saved raw logs to {debug_path}")
@@ -171,4 +158,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    print("This script is intended to be invoked via start_autoroam_cli.py")
+    print("Example: python3 start_autoroam_cli.py -i wlan0 -r -70 -d")

@@ -1,6 +1,6 @@
 from autoroam.log_collector import CollectedLogs
 import os
-from common import get_failed_roams_dir
+from autoroam.common import get_failed_roams_dir
 from datetime import datetime
 from dataclasses import dataclass, field
 import re
