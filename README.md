@@ -2,11 +2,8 @@
 This project uses native Linux tools (iw, wpa_cli, wpa_supplicant, and journalctl) to automatically scan and roam (reassociate) to BSSIDs in your ESS. It checks the current SSID you are connected to and identifies candidate APs to roam to above a configurable RSSI threshold. The roaming process is sequenced in descending order of RSSI, with the final roam being a return to the original BSSID.
 
 #### UI mode and CLI mode:
-1. `start_autoroam_ui.py` - Starts a web UI via HTTP on localhost. The web UI is fully featured, in that you can start the roam, view results, and download logs from it.
-2. `start_autoroam_cli.py` - Runs the roam cycle a single time from your shell. Stdout will print basic results, detailed output (json for all roams, debug logs, logs for failed roams) is saved to the data directory, which is automatically.
-
-
-
+1. `start_autoroam_ui.py` - Starts a web UI via HTTP on localhost. The web UI lets you run the roam process, analyze results, and download logs. 
+2. `start_autoroam_cli.py` - An optional CLI script is provided, which runs the same roam process invoked by the UI and prints results in standard out. Log files and json output are saved to the `data` directory underneath the root of this repo.
 
 ### Requirements:
 A Linux device with a Wi-Fi interface connected to an SSID. Python3, iw, wpa_cli, wpa_supplicant, and journalctl.
@@ -17,7 +14,7 @@ A Linux device with a Wi-Fi interface connected to an SSID. Python3, iw, wpa_cli
 #### Optional args:
 `-p, --port` HTTP port to launch webserver on. Default is 8080.
 
-## Run from CLI:
+## CLI option:
 `python3 start_autoroam_cli.py`
  
  #### Optional args:
