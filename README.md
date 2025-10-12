@@ -1,7 +1,7 @@
 # wlan-autoroam
 This project uses native Linux tools (iw, wpa_cli, wpa_supplicant, and journalctl) to automatically scan and roam (reassociate) to BSSIDs in your ESS. It checks the current SSID you are connected to and identifies candidate APs to roam to above a configurable RSSI threshold. The roaming process is sequenced in descending order of RSSI, with the final roam being a return to the original BSSID.
 
-#### There are two startup scripts:
+#### UI mode and CLI mode:
 1. `start_autoroam_ui.py` - Starts a web UI via HTTP on localhost. The web UI is fully featured, in that you can start the roam, view results, and download logs from it.
 2. `start_autoroam_cli.py` - Runs the roam cycle a single time from your shell. Stdout will print basic results, detailed output (json for all roams, debug logs, logs for failed roams) is saved to the data directory, which is automatically.
 
