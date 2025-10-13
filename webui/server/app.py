@@ -108,20 +108,6 @@ def download_log():
     return jsonify({"error": f"Log file not found: {filename}"}), 404
 
 
-#this is a check to see if the optional debug log file exists
-@app.route('/api/log_exists')
-def log_exists():
-    latest_dir = get_latest_run_dir()
-    if not latest_dir:
-        return jsonify({"exists": False})
-
-    filename = request.args.get("filename", "roam_debug.log")
-    log_path = os.path.join(latest_dir, os.path.basename(filename))
-
-    exists = os.path.exists(log_path)
-    return jsonify({"exists": exists})
-
-
 # ====== Save/Load Results API ======
 
 @app.route('/api/save_results', methods=['POST'])
