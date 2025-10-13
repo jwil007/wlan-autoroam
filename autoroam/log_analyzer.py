@@ -383,14 +383,14 @@ def derive_metrics(raw: LogAnalysisRaw) -> LogAnalysisDerived:
 
     return derived
 
-def save_failed_roam_logs(chunk: list[str], derived: 'LogAnalysisDerived', index: int) -> str:
+def save_failed_roam_logs(chunk: list[str], derived: 'LogAnalysisDerived', index: int, run_dir = None) -> str:
     """
     Save logs for failed roam chunks into data/failed_roams/.
     Filename example:
       roam_fail_173523_roam3_06e0fcd79ed0.log
     Returns: The filename of the saved log, or None if failed.
     """
-    fail_dir = get_failed_roams_dir()
+    fail_dir = get_failed_roams_dir(run_dir)
 
     ts = datetime.now().strftime("%H%M%S")  # short timestamp
     target = derived.roam_target_bssid or "unknown"
@@ -408,7 +408,7 @@ def save_failed_roam_logs(chunk: list[str], derived: 'LogAnalysisDerived', index
         return None
 
         
-def analyze_all_roams(collected: CollectedLogs) -> list[tuple[LogAnalysisDerived, LogAnalysisRaw]]:
+def analyze_all_roams(collected: CollectedLogs, run_dir=None) -> list[tuple[LogAnalysisDerived, LogAnalysisRaw]]:
     """
     High-level orchestrator: split logs → extract raw → compute derived.
     """
@@ -430,7 +430,7 @@ def analyze_all_roams(collected: CollectedLogs) -> list[tuple[LogAnalysisDerived
         )
 
         if roam_failed:
-            failure_filename = save_failed_roam_logs(chunk, derived, i)
+            failure_filename = save_failed_roam_logs(chunk, derived, i, run_dir=run_dir)
             if failure_filename:
                 derived.failure_log = failure_filename
                 print(f"[+] Attached failure log filename to roam {i}: {failure_filename}")

@@ -1,10 +1,11 @@
 import argparse
 import time
+import json
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 #imports for internal packages
-from autoroam.common import get_data_dir
+from autoroam.common import get_data_dir, cleanup_unsaved_runs, create_run_dir, get_runs_dir
 from autoroam.log_collector import CollectedLogs, collect_logs, stop_log_collection
 from autoroam.log_analyzer import analyze_all_roams
 from autoroam.shell_cmd_wrapper import (
@@ -34,7 +35,10 @@ def wait_for_connected(collected: CollectedLogs, start_index: int, timeout: floa
     return False
 
 
-def run_roam_cycle(iface="wlan0", min_rssi=-75, debug_file=None):
+def run_roam_cycle(iface="wlan0", min_rssi=-75):
+
+    # Remove any previous unsaved runs
+    cleanup_unsaved_runs()
 
     # Configure wpa_supplicant logging
     log_set_result, original_log_level = set_log_level(iface, "DEBUG")
@@ -54,6 +58,19 @@ def run_roam_cycle(iface="wlan0", min_rssi=-75, debug_file=None):
 
         print(f"Current SSID:  {current.ssid}")
         print(f"Current BSSID: {current.bssid}\n")
+        
+        # Create new run directory
+        run_dir = create_run_dir(current.ssid) 
+        print(f"[+] Created run directory: {run_dir}")
+
+        # Update metadata once SSID is known
+        meta_path = os.path.join(run_dir, "metadata.json")
+        with open(meta_path) as f:
+            meta = json.load(f)
+        meta["ssid"] = current.ssid or "unknown"
+        with open(meta_path, "w") as f:
+            json.dump(meta, f, indent=2)
+
 
         # Gather candidate APs for roaming
         candidates = get_scan_results(
@@ -87,7 +104,7 @@ def run_roam_cycle(iface="wlan0", min_rssi=-75, debug_file=None):
 
         # Analyze collected logs
         print("\n================== Post-Roam Analysis ==================\n")
-        results = analyze_all_roams(collected)  # → returns list[(derived, raw)]
+        results = analyze_all_roams(collected, run_dir = run_dir)  # → returns list[(derived, raw)]
 
         if not results:
             print("No roam results detected — skipping post-roam phase analysis.")
@@ -137,24 +154,24 @@ def run_roam_cycle(iface="wlan0", min_rssi=-75, debug_file=None):
             execution_duration_s=execution_duration_s,
         )
 
-        save_cycle_summary(summary, "cycle_summary.json")
+        summary_path = os.path.join(run_dir, "cycle_summary.json")
+        save_cycle_summary(summary, summary_path)
+
 
     finally:
         stop_log_collection(proc)
         restore_log_level(iface, original_log_level)
 
-    # Optional: save raw logs for debug
-    data_dir = get_data_dir()
-
-    if debug_file:
-        try:
-            # Ensure the debug path lives in /data
-            debug_path = os.path.join(data_dir, os.path.basename(debug_file))
-            with open(debug_path, "w") as f:
-                f.writelines(collected.raw_logs)
-            print(f"[+] Saved raw logs to {debug_path}")
-        except Exception as e:
-            print(f"[!] Failed to save debug logs: {e}")
+    #save raw logs for debug
+    #data_dir = get_data_dir()
+    try:
+        # Ensure the debug path lives in /data
+        debug_path = os.path.join(run_dir, "roam_debug.log")
+        with open(debug_path, "w") as f:
+            f.writelines(collected.raw_logs)
+        print(f"[+] Saved raw logs to {debug_path}")
+    except Exception as e:
+        print(f"[!] Failed to save debug logs: {e}")
 
 
 if __name__ == "__main__":
