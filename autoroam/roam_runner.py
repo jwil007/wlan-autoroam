@@ -43,7 +43,8 @@ def run_roam_cycle(iface="wlan0", min_rssi=-75, debug_file=None):
         return
 
     collected = CollectedLogs()
-    proc = collect_logs(collected)
+    proc, stop_event = collect_logs(collected)
+
 
     try:
         # Identify current connection
@@ -140,7 +141,7 @@ def run_roam_cycle(iface="wlan0", min_rssi=-75, debug_file=None):
         save_cycle_summary(summary, "cycle_summary.json")
 
     finally:
-        stop_log_collection(proc)
+        stop_log_collection(proc,stop_event)
         restore_log_level(iface, original_log_level)
 
     # Optional: save raw logs for debug
