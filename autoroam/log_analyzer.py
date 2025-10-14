@@ -168,7 +168,10 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "auth_complete_log":   (["State: AUTHENTICATING -> ASSOCIATING","State: COMPLETED -> ASSOCIATING"], False),
         "assoc_err_logs":      (["CTRL-EVENT-ASSOC-REJECT",
                                  "FT: FTE indicated that AP uses RSN",
+                                 "Association request to the driver failed",
                                  "Validation of Reassociation Response failed",
+                                 "Continuous association failures",
+                                 "CTRL-EVENT-SSID-TEMP-DISABLED"
                                  ], True), 
         "assoc_start_log":     (["nl80211: Association request send successfully",
                                  "nl80211: Connect request send successfully"], False),
