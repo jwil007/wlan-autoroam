@@ -12,7 +12,7 @@ This project uses native Linux tools (iw, wpa_cli, wpa_supplicant, and journalct
 ### Requirements:
 A Linux device with a Wi-Fi interface connected to an SSID. Python3, iw, wpa_cli, wpa_supplicant, and journalctl.
  > [!NOTE]
-> The iw scan command used may require elevated persmissions. If you run into errors, try running the script with sudo, or edit your sudoers file to allow iw to be used without password.
+> The iw scan command used may require elevated permissions. If you run into errors, try running the script with sudo, or edit your sudoers file to allow iw to be used without password.
 
 # Usage
 ## Start UI:
