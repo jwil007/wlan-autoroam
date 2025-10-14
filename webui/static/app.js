@@ -288,9 +288,15 @@ function renderRoams(){
       const errs=(ph.errors||[]);
       const card=document.createElement("div"); card.className="phaseCard";
       card.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <strong>${ph.name}</strong>
-          <span class="kbd">${
+          <span class="${ph.status==="success"?"ok":(ph.status==="N/A"||ph.status==="unknown"?"muted":"bad")}">${ph.status}</span>
+          <span class="muted">Type:</span> <span>${ph.type||"—"}</span>
+          <span class="muted">· Duration:</span> <span>${fmtMs(ph.duration_ms)}</span>
+        </div>
+        <span class="kbd" style="white-space:nowrap;margin-left:auto;">
+          ${
             ph.start
               ? new Date(ph.start).toLocaleTimeString([], {
                   hour: "2-digit",
@@ -299,11 +305,9 @@ function renderRoams(){
                   fractionalSecondDigits: 3
                 })
               : "—"
-          }</span>
-          <span class="${ph.status==="success"?"ok":(ph.status==="N/A"||ph.status==="unknown"?"muted":"bad")}">${ph.status}</span>
-          <span class="muted">Type:</span> <span>${ph.type||"—"}</span>
-          <span class="muted">· Duration:</span> <span>${fmtMs(ph.duration_ms)}</span>
-        </div>
+          }
+        </span>
+      </div>
         ${Object.keys(ph.details||{}).length?`<div class="muted" style="margin-top:6px">${Object.entries(ph.details).map(([k,v])=>`${k}: <span class="kbd">${v}</span>`).join(" · ")}</div>`:""}
         ${errs.length?`<details style="margin-top:8px"><summary>Errors (${errs.length})</summary><pre style="white-space:pre-wrap;max-height:240px;overflow:auto;margin:6px 0 0 0;color:#d9eaff">${errs.join("")}</pre></details>`:""}
       `;
