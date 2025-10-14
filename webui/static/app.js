@@ -497,6 +497,16 @@ async function pollForSummary() {
   }
 
   for (let i = 0; i < maxWait / pollInterval; i++) {
+    // 🔹 1️⃣ Check for early process exit (flag file)
+    const doneCheck = await fetch(`/server/roam_done.flag?nocache=${Date.now()}`);
+    if (doneCheck.ok) {
+      console.log("⚠️ Detected roam process finished early — stopping poll");
+      statusLabel.textContent = "Roam process exited early.";
+      hideOverlay();
+      return;
+    }
+
+    // 🔹 2️⃣ Normal summary polling
     const res = await fetch(`/api/latest_cycle_summary?nocache=${Date.now()}`);
     if (res.ok) {
       const payload = await res.json();

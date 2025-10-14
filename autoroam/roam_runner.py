@@ -40,6 +40,9 @@ def run_roam_cycle(iface="wlan0", min_rssi=-75):
     # Remove any previous unsaved runs
     cleanup_unsaved_runs()
 
+    run_dir = create_run_dir(None)
+    print(f"[+] Created temporary run directory: {run_dir}")
+
     # Configure wpa_supplicant logging
     log_set_result, original_log_level = set_log_level(iface, "DEBUG")
     if not log_set_result:
@@ -59,9 +62,11 @@ def run_roam_cycle(iface="wlan0", min_rssi=-75):
         print(f"Current SSID:  {current.ssid}")
         print(f"Current BSSID: {current.bssid}\n")
         
-        # Create new run directory
-        run_dir = create_run_dir(current.ssid) 
-        print(f"[+] Created run directory: {run_dir}")
+        # Rename temp directory by replacing "_unknown" with the SSID
+        new_dir = run_dir.replace("_unknown", f"_{current.ssid}")
+        os.rename(run_dir, new_dir)
+        run_dir = new_dir
+        print(f"[+] Renamed run directory to: {run_dir}")
 
         # Update metadata once SSID is known
         meta_path = os.path.join(run_dir, "metadata.json")
