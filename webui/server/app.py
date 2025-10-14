@@ -1,6 +1,6 @@
 # server/app.py
 from flask import Flask, jsonify, send_from_directory, request, Response, send_file
-import subprocess, os, json, time
+import subprocess, os, json, time, threading
 from autoroam.common import get_repo_root, get_log_file_path, get_data_dir, get_failed_roams_dir, get_runs_dir
 
 def get_latest_run_dir():
@@ -36,29 +36,74 @@ def add_no_cache_headers(response):
 def index():
     return app.send_static_file('index.html')
 
-
+#start roam process, listen for completion
+roam_process = None  # global handle
 @app.route('/api/start_roam', methods=['POST'])
 def start_roam():
-    # Clear old log
+    global roam_process
+
+    # Clear old log and old flag
     open(LOG_FILE, "w").close()
+    flag_path = os.path.join(BASE_DIR,"webui", "server", "roam_done.flag")
+    if os.path.exists(flag_path):
+        os.remove(flag_path)
 
     data = request.get_json(force=True) or {}
     iface = data.get("iface", "wlan0")
     rssi = str(data.get("rssi", -75))
 
     cmd = ["python3", "-u", MAIN_SCRIPT, "-i", iface, "-r", rssi]
-
     print(f"[+] Launching: {' '.join(cmd)}")
 
     logf = open(LOG_FILE, "a")
-    subprocess.Popen(
+    roam_process = subprocess.Popen(
         cmd,
         stdout=logf,
         stderr=subprocess.STDOUT,
         bufsize=1
     )
+    print(f"[+] Spawned roam_process with PID {roam_process.pid}")
+
+    def watch_proc(proc):
+        print(f"[~] Watcher thread started for PID {proc.pid}")
+        try:
+            proc.wait()
+            print(f"[!] roam process exited with code {proc.returncode}")
+
+            # Ensure the flag directory exists
+            os.makedirs(os.path.join(BASE_DIR, "webui", "server"), exist_ok=True)
+
+            # Use your helper to find the correct run directory
+            latest_run = get_latest_run_dir()
+            print(latest_run)
+            summary_path = os.path.join(latest_run or "", "cycle_summary.json")
+
+            # Only create the flag if the summary doesn’t exist
+            if not latest_run or not os.path.exists(summary_path):
+                flag_path = os.path.join(BASE_DIR, "webui", "server", "roam_done.flag")
+                with open(flag_path, "w") as f:
+                    f.write("done\n")
+                print(f"[+] Created flag (no summary detected) at {flag_path}")
+            else:
+                print(f"[✓] Summary detected in {latest_run}, skipping flag creation")
+
+        except Exception as e:
+            print(f"[x] Watcher failed: {e}")
+
+    t = threading.Thread(target=watch_proc, args=(roam_process,), daemon=True)
+    t.start()
+    print("[+] Watcher thread launched")
 
     return jsonify({"status": "started", "cmd": cmd})
+
+#Serve "roam_done.flag"
+@app.route('/server/<path:filename>')
+def serve_flag(filename):
+    path = os.path.join(BASE_DIR,"webui", "server", filename)
+    if os.path.exists(path):
+        return send_file(path)
+    return Response(status=404)
+
 
 #gets json output which fills out data on the UI. 
 @app.route('/api/latest_cycle_summary')

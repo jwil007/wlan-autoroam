@@ -12,3 +12,4 @@ sample_results.pkl
 data
 webui/static/backuphtml.html
 webui/static/backuphtml2.html
+webui/server/roam_done.flag
