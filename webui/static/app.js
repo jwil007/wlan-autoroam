@@ -55,8 +55,31 @@ function renderHeader() {
   $("#hSsid").textContent = data.ssid ?? "—";
   $("#hSec").textContent  = data.security_type ?? "—";
   $("#hExec").textContent = data.execution_duration_s != null ? `${data.execution_duration_s.toFixed(2)} s` : "—";
-  $("#hTime").textContent = data.timestamp ?? "—";
+  if (data.timestamp) {
+    const ts = new Date(data.timestamp);
+    const formatted = ts.toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    $("#hTime").textContent = formatted;
+  } else {
+    $("#hTime").textContent = "—";
+  }
+
   $("#mSecType").textContent = data.security_type ?? "—";
+  const notesContainer = document.getElementById("notesPill");
+  if (notesContainer) {
+    const notes = data.notes;
+    if (notes && notes.trim()) {
+      notesContainer.textContent = notes;
+    } else {
+      notesContainer.textContent = "—";
+    }
+  }
 }
 
 function renderMetrics() {
@@ -226,7 +249,23 @@ function renderRoams(){
         <span class="dot" style="background:${r.overall_status==='success'?cssVar('--ok'):cssVar('--bad')}"></span>
         Roam #${r.roam_index}
       </div>
-      <div><span class="muted">AP</span> ${r.target_bssid||r.final_bssid||"—"} <span class="muted">·</span> Total <strong>${fmtMs(r.roam_duration_ms)}</strong></div>
+      <div>
+        <span class="muted">AP</span> ${r.target_bssid||r.final_bssid||"—"} 
+        <span class="muted">·</span> 
+        <span class="muted">${
+          r.start_time
+            ? new Date(r.start_time).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                fractionalSecondDigits: 3
+              })
+            : "—"
+        }
+        </span>
+        <span class="muted">·</span> Total <strong>${fmtMs(r.roam_duration_ms)}</strong>
+      </div>
+
       <div class="statusGroup">
         ${r.overall_status==="failure"&&r.failure_log?`<button class="btnDownloadRoam" data-filename="${r.failure_log}">Download log file</button>`:""}
         <div class="status ${r.overall_status==="success"?"ok":"bad"}">${r.overall_status}</div>
@@ -251,6 +290,16 @@ function renderRoams(){
       card.innerHTML=`
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <strong>${ph.name}</strong>
+          <span class="kbd">${
+            ph.start
+              ? new Date(ph.start).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                  fractionalSecondDigits: 3
+                })
+              : "—"
+          }</span>
           <span class="${ph.status==="success"?"ok":(ph.status==="N/A"||ph.status==="unknown"?"muted":"bad")}">${ph.status}</span>
           <span class="muted">Type:</span> <span>${ph.type||"—"}</span>
           <span class="muted">· Duration:</span> <span>${fmtMs(ph.duration_ms)}</span>
@@ -264,23 +313,37 @@ function renderRoams(){
     head.onclick=()=>body.classList.toggle("open");
     acc.append(head,body);
     wrap.appendChild(acc);
-
-    wrap.querySelectorAll('.btnDownloadRoam').forEach(btn=>{
-      btn.addEventListener('click',async e=>{
+    console.log("Attaching handlers to download buttons...");
+    wrap.querySelectorAll('.btnDownloadRoam').forEach(btn => {
+      btn.onclick = async e => {   // ← replaces addEventListener()
         e.stopPropagation();
-        const filename=btn.dataset.filename;
-        if(!filename){alert("No log file found for this roam.");return;}
-        try{
-          const res=await fetch(`/api/download_log?filename=${encodeURIComponent(filename)}`);
-          if(!res.ok){alert("No log file found for this roam.");return;}
-          const blob=await res.blob();
-          const url=window.URL.createObjectURL(blob);
-          const a=document.createElement('a');
-          a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
-          window.URL.revokeObjectURL(url);
-        }catch(err){console.error("Failed to download roam log:",err);alert("Failed to download log.");}
-      });
+        const filename = btn.dataset.filename;
+        if (!filename) { alert("No log file found for this roam."); return; }
+        try {
+          const selectedDir = document.getElementById("loadDropdown")?.value || "";
+          const url = selectedDir
+            ? `/api/download_log?dir=${encodeURIComponent(selectedDir)}&filename=${encodeURIComponent(filename)}`
+            : `/api/download_log?filename=${encodeURIComponent(filename)}`;
+
+          const res = await fetch(`${url}&_=${Date.now()}`);
+          if (!res.ok) { alert("No log file found for this roam."); return; }
+
+          const blob = await res.blob();
+          const blobUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+          console.error("Failed to download roam log:", err);
+          alert("Failed to download log.");
+        }
+      };
     });
+
   }
 }
 
@@ -301,19 +364,8 @@ function hideOverlay(){
 ========================================================== */
 const runBtn=document.getElementById('btnRunNow');
 const statusLabel=document.getElementById('runStatus');
-const debugCheck=document.getElementById('debugCheck');
-const debugFile=document.getElementById('debugFile');
 const downloadBtn=document.getElementById('btnDownloadLog');
 
-debugCheck.addEventListener('change',()=>{
-  const enabled=debugCheck.checked;
-  debugFile.disabled=!enabled;
-  debugFile.style.opacity=enabled?'1.0':'0.4';
-  downloadBtn.disabled=!enabled;
-  downloadBtn.style.opacity=enabled?'1.0':'0.5';
-});
-debugFile.disabled=true;
-debugFile.style.opacity='0.4';
 
 let roamInProgress=false;
 runBtn.addEventListener('click',async()=>{
@@ -322,13 +374,13 @@ runBtn.addEventListener('click',async()=>{
   runBtn.disabled=true;
   statusLabel.textContent="";
   showOverlay();
+  loadDropdown.selectedIndex = 0; // reset dropdown to "Load Results..."
+
 
   const iface = document.getElementById('iface').value.trim() || "wlan0";
   const rssi = parseInt(document.getElementById('rssi').value.trim() || "-75", 10);
-  const debugEnabled = document.getElementById('debugCheck').checked;
-  const debugFile = document.getElementById('debugFile').value.trim() || "roam_debug.log";
 
-  const payload = { iface, rssi, debug: debugEnabled ? debugFile : null };
+  const payload = { iface, rssi};
   
 try {
     const startRes = await fetch('/api/start_roam', {
@@ -471,54 +523,108 @@ function renderCycleSummary(summary) {
 }
 
 /*** ==========================================================
-     DEBUG LOG DOWNLOAD HANDLER
+     DOWNLOAD DEBUG LOG BUTTON
 ========================================================== */
-downloadBtn.addEventListener('click', async () => {
-  const debugFileName = document.getElementById('debugFile').value.trim() || "roam_debug.log";
+downloadLogBtn.addEventListener("click", async () => {
   try {
-    const res = await fetch(`/api/download_log?filename=${encodeURIComponent(debugFileName)}`);
+    const selectedDir = loadDropdown.value; // empty if viewing current run
+    const url = selectedDir
+      ? `/api/download_log?dir=${encodeURIComponent(selectedDir)}&filename=roam_debug.log`
+      : `/api/download_log?filename=roam_debug.log`;
+
+    const res = await fetch(url);
     if (!res.ok) {
-      alert("No debug log found.");
+      alert("No debug log found for the selected run.");
       return;
     }
     const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = debugFileName;
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = "roam_debug.log";
     document.body.appendChild(a);
     a.click();
     a.remove();
-    window.URL.revokeObjectURL(url);
+    window.URL.revokeObjectURL(blobUrl);
   } catch (err) {
-    console.error(err);
-    alert("Failed to download log.");
+    console.error("Failed to download debug log:", err);
+    alert("Failed to download debug log.");
   }
 });
 
 /*** ==========================================================
-     DEBUG CHECK (enables/disables download)
+     Save results logic
 ========================================================== */
-debugCheck.addEventListener('change', async () => {
-  const enabled = debugCheck.checked;
-  debugFile.disabled = !enabled;
-  debugFile.style.opacity = enabled ? '1.0' : '0.4';
-  downloadBtn.disabled = true;
-  downloadBtn.style.opacity = '0.5';
+const saveBtn = document.getElementById("saveBtn");
+const saveModal = document.getElementById("saveModal");
+const confirmSave = document.getElementById("confirmSave");
+const cancelSave = document.getElementById("cancelSave");
+const notesInput = document.getElementById("notesInput");
 
-  if (enabled) {
-    const debugFileName = document.getElementById('debugFile').value.trim() || "roam_debug.log";
-    try {
-      const res = await fetch(`/api/log_exists?filename=${encodeURIComponent(debugFileName)}`);
-      const { exists } = await res.json();
-      if (exists) {
-        downloadBtn.disabled = false;
-        downloadBtn.style.opacity = '1.0';
-      } else {
-        console.log("Debug log not found yet, keeping button disabled");
-      }
-    } catch (err) {
-      console.warn("Error checking log existence:", err);
-    }
+saveBtn.onclick = () => {
+  saveModal.style.display = "flex";
+};
+
+cancelSave.onclick = () => {
+  saveModal.style.display = "none";
+  notesInput.value = "";
+};
+
+confirmSave.onclick = async () => {
+  const notes = notesInput.value.trim();
+  saveModal.style.display = "none";
+
+  try {
+    const latest = await fetch("/api/latest_cycle_summary");
+    const latestData = await latest.json();
+    const runDir = latestData.run_dir;
+
+    const res = await fetch("/api/save_results", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ run_dir: runDir, notes }),
+    });
+    const data = await res.json();
+    alert("Results saved successfully!");
+    refreshLoadDropdown();
+  } catch (err) {
+    console.error("Failed to save results:", err);
+    alert("Error saving results");
   }
-});
+};
+
+/*** ==========================================================
+     Load results logic
+========================================================== */
+const loadDropdown = document.getElementById("loadDropdown");
+
+async function refreshLoadDropdown() {
+  try {
+    const res = await fetch("/api/list_saved_runs");
+    const runs = await res.json();
+    loadDropdown.innerHTML = '<option value="">Load Results...</option>';
+    runs.forEach(run => {
+      const opt = document.createElement("option");
+      opt.value = run.dir;
+      opt.textContent = `${run.ssid} (${new Date(run.timestamp).toLocaleString()})`;
+      loadDropdown.appendChild(opt);
+    });
+  } catch (err) {
+    console.error("Failed to refresh saved runs:", err);
+  }
+}
+
+loadDropdown.onchange = async () => {
+  const dir = loadDropdown.value;
+  if (!dir) return;
+
+  try {
+    const res = await fetch(`/api/load_results?dir=${encodeURIComponent(dir)}`);
+    const data = await res.json();
+    renderCycleSummary(data);; // existing render logic for cycle_summary.json
+  } catch (err) {
+    console.error("Failed to load saved results:", err);
+  }
+};
+// Populate dropdown on startup
+refreshLoadDropdown();

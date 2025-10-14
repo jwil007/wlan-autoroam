@@ -17,15 +17,14 @@
         style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
 
         <!-- Left side -->
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <label class="btn" for="file">Load JSON</label>
-          <input id="file" type="file" accept="application/json" style="display:none" />
-          <button class="btn" id="btnDownloadLog"
-            style="background: var(--panel2); color: var(--text); border:1px solid var(--line); opacity:0.5;"
-            disabled>
-            ⬇ Debug logs
-          </button>
+        <div class="header-controls">
+          <button id="saveBtn" class="pill">💾 Save Results</button>
+          <select id="loadDropdown" class="pill">
+            <option value="" disabled selected style="display:none;">Load Results...</option>
+          </select>
+          <button id="downloadLogBtn" class="pill">⬇️ Debug Logs</button>
         </div>
+
 
         <!-- Right side -->
         <div style="display:flex;align-items:center;gap:8px;">
@@ -39,7 +38,7 @@
             <input id="rssi" type="number" placeholder="-75"
               style="width:23px;background:var(--panel2);color:var(--text);
               border:1px solid var(--line);border-radius:6px;padding:4px 6px;">
-            <label for="debug" class="muted">debug:</label>
+            <!-- <label for="debug" class="muted">debug:</label>
             <label class="toggle">
               <input id="debugCheck" type="checkbox">
               <span class="slider"></span>
@@ -47,7 +46,7 @@
             <input id="debugFile" type="text"
               placeholder="roam_debug.log"
               style="width:110px;background:var(--panel2);color:var(--text);
-              border:1px solid var(--line);border-radius:6px;padding:4px 6px;">
+              border:1px solid var(--line);border-radius:6px;padding:4px 6px;"> -->
           </div>
           <button class="btn" id="btnRunNow"
             style="background: var(--ok); color: var(--bg);">
@@ -81,6 +80,7 @@
               <div class="pill"><strong>Security:</strong> <span id="hSec">—</span></div>
               <div class="pill"><strong>Exec:</strong> <span id="hExec">—</span></div>
               <div class="pill"><strong>Started:</strong> <span id="hTime">—</span></div>
+              <div class="pill"><strong>Notes:</strong> <span id="notesPill">—</span></div>
             </div>
             <div class="metrics" style="margin-top:auto">
               <div class="metric"><div class="label">Roams</div><div class="value" id="mRoams">—</div></div>
@@ -121,6 +121,18 @@
       <section id="controlPanel" class="panel" style="display:none"></section>
     </main>
   </div>
+
+<div id="saveModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h3>Save Results</h3>
+    <textarea id="notesInput" placeholder="Optional notes about this run..."></textarea>
+    <div class="modal-actions">
+      <button id="confirmSave">Save</button>
+      <button id="cancelSave">Cancel</button>
+    </div>
+  </div>
+</div>
+
 
   <!-- Tooltip + overlay -->
   <div id="tooltip" class="tip" style="display:none"></div>

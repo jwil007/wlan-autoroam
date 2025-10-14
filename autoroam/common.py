@@ -60,18 +60,27 @@ def cleanup_unsaved_runs():
 
 
 def list_saved_runs():
-    """Return list of saved runs and metadata."""
-    runs = []
     runs_dir = get_runs_dir()
-    for entry in os.scandir(runs_dir):
-        meta_path = os.path.join(entry.path, "metadata.json")
-        if os.path.isdir(entry.path) and os.path.exists(meta_path):
-            with open(meta_path) as f:
-                meta = json.load(f)
-            if meta.get("saved", False):
-                runs.append({
-                    "dir": entry.name,
-                    **meta
-                })
-    return sorted(runs, key=lambda x: x["dir"], reverse=True)
+    results = []
+    for d in os.listdir(runs_dir):
+        path = os.path.join(runs_dir, d)
+        meta_path = os.path.join(path, "metadata.json")
+        if not os.path.isfile(meta_path):
+            continue
+        with open(meta_path) as f:
+            meta = json.load(f)
+        if meta.get("saved"):
+            # ✅ ensure timestamp is in an ISO format that JS can parse
+            ts = meta.get("timestamp")
+            if not ts:
+                # fallback to directory mtime if not recorded
+                ts = datetime.datetime.fromtimestamp(os.path.getmtime(path)).isoformat()
+            results.append({
+                "ssid": meta.get("ssid", "Unknown"),
+                "timestamp": ts,   # JS new Date() can parse this
+                "dir": d
+            })
+                # sort newest first by timestamp
+    results.sort(key=lambda r: r["timestamp"], reverse=True)
+    return results
 

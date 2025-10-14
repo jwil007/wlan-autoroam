@@ -1,11 +1,10 @@
 # server/app.py
 from flask import Flask, jsonify, send_from_directory, request, Response, send_file
 import subprocess, os, json, time
-from autoroam.common import get_repo_root, get_log_file_path, get_data_dir, get_failed_roams_dir
+from autoroam.common import get_repo_root, get_log_file_path, get_data_dir, get_failed_roams_dir, get_runs_dir
 
 def get_latest_run_dir():
     """Return the absolute path to the newest run directory, or None if none exist."""
-    from autoroam.common import get_runs_dir
     runs_dir = get_runs_dir()
     run_dirs = [
         os.path.join(runs_dir, d)
@@ -23,6 +22,15 @@ MAIN_SCRIPT = os.path.join(BASE_DIR, "start_autoroam_cli.py")
 
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
+
+@app.after_request
+def add_no_cache_headers(response):
+    if request.path.startswith("/api/download_log"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 
 @app.route('/')
 def index():
@@ -90,22 +98,29 @@ def get_logs():
 def download_log():
     filename = request.args.get("filename", "roam_debug.log")
     safe_name = os.path.basename(filename)
+    run_dir_arg = request.args.get("dir")
 
-    latest_dir = get_latest_run_dir()
-    if not latest_dir:
-        return jsonify({"error": "No runs found yet"}), 404
+    # Use provided run_dir (from UI) if available, otherwise fall back to latest
+    if run_dir_arg:
+        run_dir = os.path.join(get_runs_dir(), os.path.basename(run_dir_arg))
+    else:
+        run_dir = get_latest_run_dir()
 
-    fail_dir = os.path.join(latest_dir, "failed_roams")
+    if not run_dir or not os.path.isdir(run_dir):
+        return jsonify({"error": "No valid run directory found"}), 404
+
+    fail_dir = os.path.join(run_dir, "failed_roams")
     candidate_paths = [
-        os.path.join(latest_dir, safe_name),
+        os.path.join(run_dir, safe_name),
         os.path.join(fail_dir, safe_name),
     ]
 
     for path in candidate_paths:
         if os.path.exists(path):
-            return send_file(path, as_attachment=True)
+            return send_file(path, as_attachment=True, conditional=False)
 
     return jsonify({"error": f"Log file not found: {filename}"}), 404
+
 
 
 # ====== Save/Load Results API ======
@@ -153,14 +168,17 @@ def list_saved_runs():
 def load_results():
     """
     Loads a saved run’s cycle_summary.json for UI display.
+    Also merges in notes from metadata.json if present.
     """
     from autoroam.common import get_runs_dir
+
     run_dir = request.args.get("dir")
     if not run_dir:
         return jsonify({"error": "Missing dir parameter"}), 400
 
     run_path = os.path.join(get_runs_dir(), os.path.basename(run_dir))
     summary_path = os.path.join(run_path, "cycle_summary.json")
+    meta_path = os.path.join(run_path, "metadata.json")
 
     if not os.path.exists(summary_path):
         return jsonify({"error": "cycle_summary.json not found"}), 404
@@ -168,7 +186,18 @@ def load_results():
     with open(summary_path) as f:
         summary = json.load(f)
 
+    # --- merge in metadata.json if it exists ---
+    if os.path.exists(meta_path):
+        try:
+            with open(meta_path) as mf:
+                meta = json.load(mf)
+            summary["notes"] = meta.get("notes", "")
+            summary["saved"] = meta.get("saved", False)
+        except Exception as e:
+            print(f"[WARN] Could not read metadata.json for {run_dir}: {e}")
+
     return jsonify(summary)
+
 
 
 

@@ -41,6 +41,8 @@ def build_cycle_summary(
 
         cycle["roams"].append({
             "roam_index": idx,
+            "start_time": getattr(derived, "roam_start_time", None),
+            "end_time": getattr(derived, "roam_end_time", None),
             "target_bssid": getattr(derived, "roam_target_bssid", None),
             "final_bssid": getattr(derived, "roam_final_bssid", None),
             "final_freq": getattr(derived, "final_freq", None),

@@ -64,6 +64,30 @@ button:disabled,
   color: var(--muted);
   border-color: var(--line);
 }
+button, .btn {
+  cursor: pointer;
+}
+
+button, select, .btn {
+  color: var(--text);
+}
+
+button, .btn {
+  color: var(--text);
+  background-color: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px 14px;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+button:hover, .btn:hover,
+button:focus, .btn:focus {
+  border-color: var(--ok);
+  background-color: var(--panel2);
+  outline: none;
+}
+
 
 /* ======================
    PANELS & SECTION HEADERS
@@ -178,6 +202,14 @@ th{color:#a2bad6;font-weight:600;text-transform:uppercase;letter-spacing:.12em;f
   text-align:right;
 }
 
+.kbd {
+  font-family: monospace;
+  background: rgba(255,255,255,.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
 /* ======================
    HEADER PILLS
 ====================== */
@@ -236,3 +268,59 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield;}
    ANIMATIONS
 ====================== */
 @keyframes spin { from {transform:rotate(0)} to {transform:rotate(360deg)} }
+
+/* ======================
+   MODAL
+====================== */
+.modal {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--panel2);
+  padding: 24px;
+  border-radius: 12px;
+  width: 340px;
+  color: var(--text);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(-142%);
+}
+
+
+.modal-content textarea {
+  width: 100%;
+  height: 80px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.modal-actions button {
+  margin-left: 8px;
+}
+
+
+/* ======================
+   Remove dropdown focus
+====================== */
+#loadDropdown:focus {
+  outline: none;
+  box-shadow: none;
+}
