@@ -125,101 +125,121 @@ function renderChart() {
   const svg = $("#chart");
   svg.innerHTML = "";
 
-  const padL=110, padR=20, padT=18, padB=32;
-  const W = svg.clientWidth, H = svg.clientHeight;
-  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const padL = 110, padR = 20, padT = 18, padB = 32;
 
+  // Build items FIRST so we know how tall the SVG needs to be
   const roams = (data.roams || []);
-  const items = roams.map((r,i)=>{
-    const segs = PHASES.map(p=>{
+  const items = roams.map((r, i) => {
+    const segs = PHASES.map(p => {
       const ph = r.phases?.[p.key];
       const dur = ph?.duration_ms ?? 0;
       return {
-        k:p.key,label:p.label,dur:+dur,color:p.color,status:ph?.status,type:ph?.type,
-        target:r.target_bssid, rssi: findRssi(r.target_bssid)
+        k: p.key, label: p.label, dur: +dur, color: p.color, status: ph?.status, type: ph?.type,
+        target: r.target_bssid, rssi: findRssi(r.target_bssid)
       };
     });
-    const total = segs.reduce((s,x)=>s+(x.dur||0),0);
-    return {index:r.roam_index,total,segs,status:r.overall_status,target:r.target_bssid,freq:r.final_freq};
+    const total = segs.reduce((s, x) => s + (x.dur || 0), 0);
+    return { index: r.roam_index, total, segs, status: r.overall_status, target: r.target_bssid, freq: r.final_freq };
   });
 
-  const maxX = Math.max(1, ...items.map(d=>d.total));
+// --- Dynamic SVG height and scroll handling ---
+const baseVisibleRows = 20;   // show up to 20 roams without scrolling
+const rowPitch = 28;          // estimated vertical spacing per roam row
+const baseHeight = 400;       // matches .chartWrap max-height (px)
+
+// Calculate how tall the SVG should be
+let desiredHeight = baseHeight;
+if (items.length > baseVisibleRows) {
+  desiredHeight = padT + padB + items.length * rowPitch;
+}
+
+// Apply height: fixed (<=20 rows) or scrollable (>20)
+svg.style.height = `${desiredHeight}px`;
+
+
+  // Now measure after height is set
+  const W = svg.clientWidth;
+  const H = svg.clientHeight;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+
+  const maxX = Math.max(1, ...items.map(d => d.total));
 
   // grid + labels
-  for (let i=0;i<=4;i++){
-    const x = padL + (i/4)*plotW;
-    const gl = document.createElementNS(svg.namespaceURI,"line");
-    gl.setAttribute("x1",x);gl.setAttribute("x2",x);
-    gl.setAttribute("y1",padT);gl.setAttribute("y2",padT+plotH);
-    gl.setAttribute("stroke","#213045");gl.setAttribute("stroke-width","1");
+  for (let i = 0; i <= 4; i++) {
+    const x = padL + (i / 4) * plotW;
+    const gl = document.createElementNS(svg.namespaceURI, "line");
+    gl.setAttribute("x1", x); gl.setAttribute("x2", x);
+    gl.setAttribute("y1", padT); gl.setAttribute("y2", padT + plotH);
+    gl.setAttribute("stroke", "#213045"); gl.setAttribute("stroke-width", "1");
     svg.appendChild(gl);
-    const lbl = document.createElementNS(svg.namespaceURI,"text");
-    lbl.setAttribute("x",x); lbl.setAttribute("y",H-10);
-    lbl.setAttribute("text-anchor","middle");
-    lbl.setAttribute("fill","#e8f1ff");
-    lbl.textContent = `${Math.round((i/4)*maxX)} ms`;
+    const lbl = document.createElementNS(svg.namespaceURI, "text");
+    lbl.setAttribute("x", x); lbl.setAttribute("y", H - 10);
+    lbl.setAttribute("text-anchor", "middle");
+    lbl.setAttribute("fill", "#e8f1ff");
+    lbl.textContent = `${Math.round((i / 4) * maxX)} ms`;
     svg.appendChild(lbl);
   }
 
   // bars + chips
   const rowH = plotH / Math.max(1, items.length);
   const barH = Math.max(14, rowH - 12);
-  items.forEach((d,rowIdx)=>{
-    const y = padT + rowIdx*rowH + (rowH-barH)/2;
-    const statusColor = (d.status==="success"? cssVar('--ok'): cssVar('--bad')) || "#25e07b";
-    const chipGroup = document.createElementNS(svg.namespaceURI,"g");
-    const rect = document.createElementNS(svg.namespaceURI,"rect");
-    rect.setAttribute("x",14);
-    rect.setAttribute("y",y+(barH-20)/2);
-    rect.setAttribute("width",78);
-    rect.setAttribute("height",20);
-    rect.setAttribute("rx",10);
-    rect.setAttribute("fill",statusColor);
-    rect.setAttribute("opacity","0.9");
+  items.forEach((d, rowIdx) => {
+    const y = padT + rowIdx * rowH + (rowH - barH) / 2;
+    const statusColor = (d.status === "success" ? cssVar('--ok') : cssVar('--bad')) || "#25e07b";
+    const chipGroup = document.createElementNS(svg.namespaceURI, "g");
+    const rect = document.createElementNS(svg.namespaceURI, "rect");
+    rect.setAttribute("x", 14);
+    rect.setAttribute("y", y + (barH - 20) / 2);
+    rect.setAttribute("width", 78);
+    rect.setAttribute("height", 20);
+    rect.setAttribute("rx", 10);
+    rect.setAttribute("fill", statusColor);
+    rect.setAttribute("opacity", "0.9");
     chipGroup.appendChild(rect);
-    const t = document.createElementNS(svg.namespaceURI,"text");
-    t.setAttribute("x",53);
-    t.setAttribute("y",y+barH/2+1);
-    t.setAttribute("text-anchor","middle");
-    t.setAttribute("class","rowChip chipTextLight");
+    const t = document.createElementNS(svg.namespaceURI, "text");
+    t.setAttribute("x", 53);
+    t.setAttribute("y", y + barH / 2 + 1);
+    t.setAttribute("text-anchor", "middle");
+    t.setAttribute("class", "rowChip chipTextLight");
     t.textContent = `Roam #${d.index}`;
     chipGroup.appendChild(t);
     svg.appendChild(chipGroup);
 
-    let cursor=0;
-    d.segs.forEach(seg=>{
-      if(!visible.has(seg.k)||!seg.dur)return;
-      const w=(seg.dur/maxX)*plotW;
-      const r=document.createElementNS(svg.namespaceURI,"rect");
-      r.setAttribute("x",padL+cursor);
-      r.setAttribute("y",y);
-      r.setAttribute("width",Math.max(0,w));
-      r.setAttribute("height",barH);
-      r.setAttribute("rx",4);
-      r.setAttribute("fill",seg.color);
-      r.setAttribute("opacity",seg.status==="success"?"1":"0.9");
-      r.addEventListener("mousemove",ev=>{
-        showTip(ev.clientX,ev.clientY,`
-          <h4>Roam #${d.index} · ${seg.status||"—"}</h4>
-          <p><strong>AP</strong> ${d.target||"—"} · <strong>${seg.type||seg.k}</strong></p>
-          <p>RSSI: ${seg.rssi??"—"} · Phase: <strong>${seg.label}</strong> = ${fmtMs(seg.dur)}</p>
+    let cursor = 0;
+    d.segs.forEach(seg => {
+      if (!visible.has(seg.k) || !seg.dur) return;
+      const w = (seg.dur / maxX) * plotW;
+      const r = document.createElementNS(svg.namespaceURI, "rect");
+      r.setAttribute("x", padL + cursor);
+      r.setAttribute("y", y);
+      r.setAttribute("width", Math.max(0, w));
+      r.setAttribute("height", barH);
+      r.setAttribute("rx", 4);
+      r.setAttribute("fill", seg.color);
+      r.setAttribute("opacity", seg.status === "success" ? "1" : "0.9");
+      r.addEventListener("mousemove", ev => {
+        showTip(ev.clientX, ev.clientY, `
+          <h4>Roam #${d.index} · ${seg.status || "—"}</h4>
+          <p><strong>AP</strong> ${d.target || "—"} · <strong>${seg.type || seg.k}</strong></p>
+          <p>RSSI: ${seg.rssi ?? "—"} · Phase: <strong>${seg.label}</strong> = ${fmtMs(seg.dur)}</p>
           <small>Total: ${fmtMs(d.total)}</small>`);
       });
-      r.addEventListener("mouseleave",hideTip);
+      r.addEventListener("mouseleave", hideTip);
       svg.appendChild(r);
-      cursor+=w;
+      cursor += w;
     });
   });
 
-  const leg=$("#legend"); leg.innerHTML="";
-  for(const p of PHASES){
-    const chip=document.createElement("div");
-    chip.className="chip"+(visible.has(p.key)?"":" dim");
-    chip.innerHTML=`<span class="dot" style="background:${p.color}"></span>${p.label}`;
-    chip.onclick=()=>{visible.has(p.key)?visible.delete(p.key):visible.add(p.key);renderChart();};
+  const leg = $("#legend"); leg.innerHTML = "";
+  for (const p of PHASES) {
+    const chip = document.createElement("div");
+    chip.className = "chip" + (visible.has(p.key) ? "" : " dim");
+    chip.innerHTML = `<span class="dot" style="background:${p.color}"></span>${p.label}`;
+    chip.onclick = () => { visible.has(p.key) ? visible.delete(p.key) : visible.add(p.key); renderChart(); };
     leg.appendChild(chip);
   }
 }
+
 
 function showTip(x,y,html){
   const t=$("#tooltip"); t.innerHTML=html; t.style.display="block";

@@ -324,3 +324,27 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield;}
   outline: none;
   box-shadow: none;
 }
+
+/* ======================
+   SCROLLABLE CHART
+====================== */
+.chartWrap{
+  max-height: 400px;   /* pick a height that fits your layout */
+  overflow-y: auto;    /* vertical scroll when SVG exceeds 400px */
+  overflow-x: hidden;
+}
+/* ===== Scrollbar (dark theme) ===== */
+.chartWrap::-webkit-scrollbar {
+  width: 10px;
+}
+.chartWrap::-webkit-scrollbar-thumb {
+  background-color: #1e2a34;        /* dark slate thumb */
+  border-radius: 6px;
+  border: 2px solid #0f1520;        /* gap blend with background */
+}
+.chartWrap::-webkit-scrollbar-thumb:hover {
+  background-color: #2c3b4c;
+}
+.chartWrap::-webkit-scrollbar-track {
+  background-color: #0b0f14;
+}
