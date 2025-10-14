@@ -371,6 +371,19 @@ function renderRoams(){
   }
 }
 
+function expandAllRoams() {
+  document.querySelectorAll("#roams .accBody").forEach(b => b.classList.add("open"));
+}
+
+function collapseAllRoams() {
+  document.querySelectorAll("#roams .accBody").forEach(b => b.classList.remove("open"));
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  $("#btnExpandAll")?.addEventListener("click", expandAllRoams);
+  $("#btnCollapseAll")?.addEventListener("click", collapseAllRoams);
+});
+
 /*** ==========================================================
      OVERLAY CONTROLS
 ========================================================== */

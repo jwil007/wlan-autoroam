@@ -88,7 +88,15 @@ button:focus, .btn:focus {
   outline: none;
 }
 
-
+#btnExpandAll, #btnCollapseAll {
+  font-size: 0.8em;
+  padding: 4px 10px;
+  margin-left: 4px;
+}
+/* Adds space below the expand/collapse buttons row */
+#roamsButtons {
+  margin-bottom: 10px;   /* tweak 8–14px to taste */
+}
 /* ======================
    PANELS & SECTION HEADERS
 ====================== */
