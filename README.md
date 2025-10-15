@@ -67,7 +67,8 @@ To make API calls you need an X-API-Key header using the key stored in webui/ser
  
 
 # UI Screenshot
-<img width="1273" height="2275" alt="10 0 10 58_8443_" src="https://github.com/user-attachments/assets/33250a7a-5af9-41b1-b904-e23920a33e4b" />
+<img width="1273" height="1991" alt="10 0 10 58_8443_ (2)" src="https://github.com/user-attachments/assets/ee1238f5-19b2-452b-8046-f6f9e762c3a8" />
+
 
 
 
