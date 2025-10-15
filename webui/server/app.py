@@ -1,7 +1,11 @@
 # server/app.py
-from flask import Flask, jsonify, send_from_directory, request, Response, send_file
+from flask import(Flask, jsonify,send_from_directory, request,
+                  Response, send_file, redirect, url_for, render_template, session)
 import subprocess, os, json, time, threading
+from datetime import timedelta
 from autoroam.common import get_repo_root, get_log_file_path, get_data_dir, get_failed_roams_dir, get_runs_dir
+from functools import wraps
+import base64
 
 def get_latest_run_dir():
     """Return the absolute path to the newest run directory, or None if none exist."""
@@ -13,15 +17,60 @@ def get_latest_run_dir():
     ]
     return max(run_dirs, key=os.path.getmtime) if run_dirs else None
 
-
-
 BASE_DIR = get_repo_root()
 STATIC_DIR = os.path.join(BASE_DIR, "webui", "static")
+TEMPLATE_DIR = os.path.join(BASE_DIR, "webui", "templates")
 LOG_FILE = get_log_file_path()
 MAIN_SCRIPT = os.path.join(BASE_DIR, "start_autoroam_cli.py")
 
 
-app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
+USERNAME = os.environ.get("WEB_USER", "admin")
+PASSWORD = os.environ.get("WEB_PASS", "autoroam123")
+
+
+app = Flask(
+    __name__,
+    static_folder=STATIC_DIR,
+    template_folder=TEMPLATE_DIR
+)
+app.secret_key = os.environ.get("FLASK_SECRET", "dev-secret-key")
+app.permanent_session_lifetime = timedelta(hours=2)
+
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+#Login handling
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        user = request.form.get("username")
+        pw = request.form.get("password")
+        if user == USERNAME and pw == PASSWORD:
+            session["logged_in"] = True
+            session.permanent = True
+            return redirect(url_for("index"))
+        # On invalid login, redisplay the form with error
+        return render_template("login.html", error="Invalid credentials")
+
+    # Initial GET
+    return render_template("login.html", error=None)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+@app.before_request
+def enforce_login():
+    if request.path.startswith("/api/") or request.path.startswith("/static/"):
+        return
+    if request.endpoint in ("login", "logout"):
+        return
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
 
 @app.after_request
 def add_no_cache_headers(response):
@@ -29,12 +78,12 @@ def add_no_cache_headers(response):
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
+    if request.path == "/login":
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     return response
 
-
-@app.route('/')
-def index():
-    return app.send_static_file('index.html')
 
 #start roam process, listen for completion
 roam_process = None  # global handle
