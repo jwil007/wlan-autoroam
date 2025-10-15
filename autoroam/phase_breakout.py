@@ -106,7 +106,7 @@ def analyze_from_derived(derived: LogAnalysisDerived, raw: Optional[LogAnalysisR
                 phases[0].errors.append(log)
         if raw.pmksa_err_logs:
             for log in raw.pmksa_err_logs:
-                phases[1].errors.append(log)
+                phases[2].errors.append(log)
         if raw.auth_disco_log:
             phases[0].errors.append(raw.auth_disco_log)
         if raw.assoc_disco_log:

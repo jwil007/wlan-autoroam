@@ -162,7 +162,8 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
         "roam_fail_log":       (["-> DISCONNECTED"], False),
         "auth_type_log":       (["* Auth Type"], False),
-        "auth_err_logs":       (["CTRL-EVENT-AUTH-REJECT",re.compile(r"Authentication with ([0-9a-f]{2}:){5}[0-9a-f]{2} timed out", re.I)], True),
+        "auth_err_logs":       (["CTRL-EVENT-AUTH-REJECT",re.compile(r"Authentication with ([0-9a-f]{2}:){5}[0-9a-f]{2} timed out", re.I),
+                                 "SME: Authentication timed out"], True),
         "auth_start_log":      (["nl80211: Authentication request send successfully",
                                  "CTRL_IFACE ROAM "], False),
         "auth_complete_log":   (["State: AUTHENTICATING -> ASSOCIATING","State: COMPLETED -> ASSOCIATING"], False),
@@ -171,7 +172,8 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
                                  "Association request to the driver failed",
                                  "Validation of Reassociation Response failed",
                                  "Continuous association failures",
-                                 "CTRL-EVENT-SSID-TEMP-DISABLED"
+                                 "CTRL-EVENT-SSID-TEMP-DISABLED",
+                                 "PMKID from assoc IE not found from PMKSA cache"
                                  ], True), 
         "assoc_start_log":     (["nl80211: Association request send successfully",
                                  "nl80211: Connect request send successfully"], False),
@@ -190,7 +192,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "fourway_start_log":   (["WPA: RX message 1 of 4-Way Handshake"], False),
         "fourway_success_log": (["WPA: Key negotiation completed"], False),
         "pmksa_cache_used_log":(["PMKSA caching was used"], False),
-        "pmksa_err_logs":      (["PMKSA caching attempt rejected"], True),
+        "pmksa_err_logs":      (["PMKSA caching attempt rejected","Authenticator did not accept PMKID"], True),
         "freq_log":            (["Operating frequency changed from"], False),
         "noconfig_log":        (["No network configuration known"], False),
         "notarget_log":        (["Target AP not found from BSS table"], False)

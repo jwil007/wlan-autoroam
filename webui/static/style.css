@@ -309,6 +309,43 @@ th{color:#a2bad6;font-weight:600;text-transform:uppercase;letter-spacing:.12em;f
   font-size: 0.9em;
 }
 
+/* --- Log pill styling --- */
+.logDetails {
+  margin-top: 8px;
+}
+
+.logPill {
+  cursor: pointer;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.logPill:hover {
+  background: var(--panel2);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.logContent {
+  white-space: pre-wrap;
+  max-height: 240px;
+  overflow: auto;
+  margin: 6px 0 0 0;
+  color: #d9eaff;
+  font-family: monospace;
+  font-size: 13px;
+  background: #0b1117;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+}
+
 /* ======================
    HEADER PILLS
 ====================== */

@@ -329,7 +329,12 @@ function renderRoams(){
         </span>
       </div>
         ${Object.keys(ph.details||{}).length?`<div class="muted" style="margin-top:6px">${Object.entries(ph.details).map(([k,v])=>`${k}: <span class="kbd">${v}</span>`).join(" · ")}</div>`:""}
-        ${errs.length?`<details style="margin-top:8px"><summary>Errors (${errs.length})</summary><pre style="white-space:pre-wrap;max-height:240px;overflow:auto;margin:6px 0 0 0;color:#d9eaff">${errs.join("")}</pre></details>`:""}
+        ${errs.length ? `
+          <details class="logDetails">
+            <summary><span class="pill logPill">Informative logs (${errs.length})</span></summary>
+            <pre class="logContent">${errs.join("")}</pre>
+          </details>
+        ` : ""}
       `;
       body.appendChild(card);
     });
