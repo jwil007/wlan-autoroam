@@ -2,6 +2,12 @@
 import argparse
 from autoroam.roam_runner import run_roam_cycle
 
+import os, sys
+# ensure project root is on the import path
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
+
 def main():
     # CLI Arguments
     parser = argparse.ArgumentParser(description="Wi-Fi Roam Test Tool")

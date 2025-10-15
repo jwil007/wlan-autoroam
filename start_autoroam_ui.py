@@ -3,10 +3,12 @@ import argparse
 from autoroam.common import get_repo_root
 import sys, os
 
+
 # Add repo root to path (so we can import webui.server.app easily)
 repo_root = get_repo_root()
-sys.path.insert(0, os.path.join(repo_root, "webui", "server"))
-
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
+    
 from webui.server.app import run_server
 
 def main():

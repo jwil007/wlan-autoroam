@@ -4,8 +4,17 @@ from flask import(Flask, jsonify,send_from_directory, request,
 import subprocess, os, json, time, threading
 from datetime import timedelta
 from autoroam.common import get_repo_root, get_log_file_path, get_data_dir, get_failed_roams_dir, get_runs_dir
-from functools import wraps
-import base64
+from dotenv import load_dotenv
+
+# Prefer .env, fallback to .env.example for new users
+if os.path.exists(".env"):
+    load_dotenv(".env")
+    print("[INFO] Loaded environment from .env")
+elif os.path.exists(".env.example"):
+    load_dotenv(".env.example")
+    print("[INFO] Loaded environment from .env.example (defaults)")
+else:
+    print("[WARN] No .env or .env.example found")
 
 def get_latest_run_dir():
     """Return the absolute path to the newest run directory, or None if none exist."""
@@ -24,8 +33,12 @@ LOG_FILE = get_log_file_path()
 MAIN_SCRIPT = os.path.join(BASE_DIR, "start_autoroam_cli.py")
 
 
-USERNAME = os.environ.get("WEB_USER", "admin")
-PASSWORD = os.environ.get("WEB_PASS", "autoroam123")
+USERNAME = os.getenv("WEB_USER")
+PASSWORD = os.getenv("WEB_PASS")
+
+if not USERNAME or not PASSWORD:
+    raise RuntimeError("Missing required environment variables: WEB_USER and/or WEB_PASS")
+
 
 
 app = Flask(
