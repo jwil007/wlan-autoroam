@@ -37,7 +37,7 @@ sudo venv/bin/python start_autoroam_ui.py
 
 The UI is the only thing you need to run, as it has a Run Now button to kick off the roam cycle.
 1. Rename `.env.example` to `.env`.  replace placeholder WEB_USER and WEB_PASS values with your preferred username and password. Set FLASK_SECRET to any random string.
-2. Run startup script `sudo venv/bin/python3 start_autoroam_ui.py`. This spins up HTTPS web server at localhost port 8443. If you want to change the port, use the `-p` flag - for example  `python3 start_autoroam_ui.py -p 10443`.
+2. Run startup script `sudo venv/bin/python3 start_autoroam_ui.py`. This spins up HTTPS web server at localhost port 8443. If you want to change the port, use the `-p` flag - for example  `-p 10443`.
 3. Log in at https://localhost:8443 (or whatever port you set).
 4. Set the iface and min_rssi params on the top right of the UI, or leave defaults `wlan0` and `-75`. Click Run Now to kick off the test.
   > [!NOTE]
