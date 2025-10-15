@@ -19,7 +19,7 @@ A Linux device with a Wi-Fi interface connected to an SSID. Python3, iw, wpa_cli
 ## Web UI:
 
 The UI is the only thing you need to run, as it has a Run Now button to kick off the roam cycle.
-1. Rename `.env.example` to `.env`.  replace placeholder WEB_USER and WEB+PASS values with your preferred username and password. Set FLASK_SECRET to any random string.
+1. Rename `.env.example` to `.env`.  replace placeholder WEB_USER and WEB_PASS values with your preferred username and password. Set FLASK_SECRET to any random string.
 2. Run startup script `python3 start_autoroam_ui.py`. This spins up HTTPS web server at localhost port 8443. If you want to change the port, use the `-p` flag - for example  `python3 start_autoroam_ui.py -p 10443`.
 3. Log in at https://localhost:8443 (or whatever port you set).
 4. Kick off the roam cycle with the Run Now button.
