@@ -368,6 +368,6 @@ def run_server(port=8443):
     app.run(
         host="0.0.0.0",
         port=port,
-        debug=True,
+        debug=False,
         ssl_context=ssl_context
     )
