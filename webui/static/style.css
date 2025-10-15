@@ -160,7 +160,34 @@ button:focus, .btn:focus {
   color: var(--warn);
 }
 
+#topbar .topbar-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
+#topbar .actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btnDocs {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 0.4em 0.8em;
+  border-radius: 0.4em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnDocs:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: var(--ok);
+  color: var(--ok);
+}
 /* ======================
    PANELS & SECTION HEADERS
 ====================== */

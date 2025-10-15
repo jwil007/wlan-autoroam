@@ -1,0 +1,282 @@
+openapi: 3.1.0
+info:
+  title: Autoroam API
+  version: 1.0.0
+  description: |
+    REST API for the Autoroam Wi-Fi roaming analyzer and test UI.
+    All `/api/` routes require authentication via either:
+      1. A valid UI login session, or
+      2. An `X-API-Key` header using the key stored in `webui/server/api_key.txt`.
+
+    HTTPS is recommended and enabled by default (self-signed certificates are supported).
+
+servers:
+  - url: https://localhost:8443
+    description: Default local HTTPS server
+
+security:
+  - ApiKeyAuth: []
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        API key stored in `webui/server/api_key.txt`.  
+        Not required when authenticated via the web UI.
+
+  schemas:
+    LogResponse:
+      type: object
+      properties:
+        log:
+          type: string
+          example: "Starting roam on wlan0...\nScan complete..."
+    SummaryResponse:
+      type: object
+      properties:
+        mtime:
+          type: number
+          example: 1739213958.218912
+        run_dir:
+          type: string
+          example: /home/autoroam/runs/run_2025-10-14_12-30-22
+        data:
+          type: object
+          description: Parsed contents of `cycle_summary.json`
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Unauthorized"
+
+paths:
+
+  /api/start_roam:
+    post:
+      summary: Start a new roam test
+      description: Launches the `start_autoroam_cli.py` process with the given interface and RSSI threshold.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                iface:
+                  type: string
+                  default: wlan0
+                rssi:
+                  type: integer
+                  default: -75
+      responses:
+        "200":
+          description: Roam process started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: started
+                  cmd:
+                    type: array
+                    items:
+                      type: string
+        "401":
+          description: Missing or invalid API key
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /api/latest_cycle_summary:
+    get:
+      summary: Get latest roam summary
+      description: Returns the most recent `cycle_summary.json` file and its modification time.
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Summary data
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SummaryResponse' }
+        "404":
+          description: No runs or summary found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /api/logs:
+    get:
+      summary: Get live roam logs
+      description: Returns current stdout log output from the running roam process.
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Log content
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LogResponse' }
+
+  /api/download_log:
+    get:
+      summary: Download a log file
+      description: Downloads a log file from the latest or specified run directory.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: filename
+          in: query
+          required: false
+          description: Name of log file (default `roam_debug.log`)
+          schema: { type: string }
+        - name: dir
+          in: query
+          required: false
+          description: Specific run directory name to look in
+          schema: { type: string }
+      responses:
+        "200":
+          description: File download
+          content:
+            application/octet-stream: {}
+        "404":
+          description: File not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /api/save_results:
+    post:
+      summary: Save run metadata and notes
+      description: Marks a run as saved and adds optional notes to `metadata.json`.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                run_dir:
+                  type: string
+                  example: /home/autoroam/runs/run_2025-10-14_12-30-22
+                notes:
+                  type: string
+                  example: "Good roam test with new driver"
+      responses:
+        "200":
+          description: Run saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: saved
+                  run_dir:
+                    type: string
+                  notes:
+                    type: string
+        "400":
+          description: Missing parameters
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "404":
+          description: metadata.json not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /api/list_saved_runs:
+    get:
+      summary: List all saved runs
+      description: Returns metadata for all saved roam runs with `saved=true`.
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: List of saved runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: run_2025-10-12_22-18-47
+                    notes:
+                      type: string
+                      example: baseline test
+                    saved:
+                      type: boolean
+                      example: true
+                    mtime:
+                      type: number
+
+  /api/load_results:
+    get:
+      summary: Load saved run data
+      description: Returns a run’s `cycle_summary.json` merged with metadata notes.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: dir
+          in: query
+          required: true
+          description: Directory name of the run
+          schema: { type: string }
+      responses:
+        "200":
+          description: Combined summary and metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overall_status: { type: string, example: success }
+                  notes: { type: string, example: baseline test }
+                  saved: { type: boolean, example: true }
+        "400":
+          description: Missing dir parameter
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /server/{filename}:
+    get:
+      summary: Get internal server flag file
+      description: Serves internal files from `webui/server/`, such as `roam_done.flag`.
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Raw file response
+          content:
+            text/plain: {}
+        "404":
+          description: File not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }

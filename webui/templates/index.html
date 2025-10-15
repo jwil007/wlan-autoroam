@@ -16,9 +16,14 @@
         <img src="{{ url_for('static', filename='favicon.ico') }}" alt="logo" class="logo">
         <span class="title">Autoroam</span>
       </div>
-      <button id="btnLogout" class="btnLogout">Logout</button>
+
+      <div class="actions">
+        <button id="btnDocs" class="btnDocs" onclick="window.open('/api/docs', '_blank')">API Docs (Beta)</button>
+        <button id="btnLogout" class="btnLogout">Logout</button>
+      </div>
     </div>
   </div>
+
 
   <div class="container">
     <main id="app">

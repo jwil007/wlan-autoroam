@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Autoroam API Docs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    #redoc-container {
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="redoc-container"></div>
+  <script>
+    Redoc.init('/api/docs/openapi.yaml', {}, document.getElementById('redoc-container'));
+  </script>
+</body>
+</html>

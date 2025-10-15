@@ -129,6 +129,7 @@ def add_no_cache_headers(response):
     return response
 
 
+
 #start roam process, listen for completion
 roam_process = None  # global handle
 @app.route('/api/start_roam', methods=['POST'])
@@ -336,7 +337,15 @@ def load_results():
 
     return jsonify(summary)
 
+@app.route("/api/docs")
+def api_docs():
+    docs_dir = os.path.join(BASE_DIR, "docs")
+    return send_from_directory(docs_dir, "swagger.html")
 
+@app.route("/api/docs/<path:filename>")
+def api_docs_assets(filename):
+    docs_dir = os.path.join(BASE_DIR, "docs")
+    return send_from_directory(docs_dir, filename)
 
 
 
