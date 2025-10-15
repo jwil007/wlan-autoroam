@@ -22,6 +22,7 @@ class LogAnalysisRaw:
     key_mgmt_log: str | None = None
     fourway_start_log: str | None = None
     fourway_success_log: str | None = None
+    fourway_err_logs: list[str] = field(default_factory=list)
     ft_success_logs: list[str] = field(default_factory=list)
     eap_method_log: str | None = None
     eap_start_logs: list[str] = field(default_factory=list)
@@ -160,7 +161,10 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "roam_start_log":      (["nl80211: Authentication request send successfully",
                                  "CTRL_IFACE ROAM "], False),
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
-        "roam_fail_log":       (["-> DISCONNECTED"], False),
+        "roam_fail_log":       (["-> DISCONNECTED",
+                                 "No network configuration known",
+                                 "Target AP not found from BSS table",
+                                 ], False),
         "auth_type_log":       (["* Auth Type"], False),
         "auth_err_logs":       (["CTRL-EVENT-AUTH-REJECT",re.compile(r"Authentication with ([0-9a-f]{2}:){5}[0-9a-f]{2} timed out", re.I),
                                  "SME: Authentication timed out"], True),
@@ -191,6 +195,7 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "key_mgmt_log":        (["WPA: using KEY_MGMT","RSN: using KEY_MGMT"], False),
         "fourway_start_log":   (["WPA: RX message 1 of 4-Way Handshake"], False),
         "fourway_success_log": (["WPA: Key negotiation completed"], False),
+        "fourway_err_logs":    (["4-Way Handshake failed","reason=WRONG_KEY"], True),
         "pmksa_cache_used_log":(["PMKSA caching was used"], False),
         "pmksa_err_logs":      (["PMKSA caching attempt rejected","Authenticator did not accept PMKID"], True),
         "freq_log":            (["Operating frequency changed from"], False),
