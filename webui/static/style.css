@@ -130,16 +130,16 @@ button:focus, .btn:focus {
 }
 
 #topbar .logo {
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
   opacity: 0.9;
 }
 
 #topbar .title {
-  font-size: 1rem;
+  font-size: 1.4rem;
   font-weight: 600;
   color: var(--text);
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
 }
 
 /* Right side logout button */
