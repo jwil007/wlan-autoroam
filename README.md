@@ -24,7 +24,7 @@ The UI is the only thing you need to run, as it has a Run Now button to kick off
 3. Log in at https://localhost:8443 (or whatever port you set).
 4. Kick off the roam cycle with the Run Now button.
   > [!NOTE]
-> The cert for HTTPS is self signed, so you will need to click through the browser warning. If you prefer to replace the certs, the cert files `server.crt` and `server.key` in `webui/server/certs `.
+> The cert for HTTPS is self signed, so you will need to click through the browser warning. If you prefer to replace the certs, the files are `server.crt` and `server.key` in `webui/server/certs `.
 ### Saving and loading results
 After running a roam cycle, you may want to save the results to analyze in the future. If results are not saved, they will be flushed the next time you start the roam cycle.
 
