@@ -1,10 +1,24 @@
 # server/app.py
 from flask import(Flask, jsonify,send_from_directory, request,
                   Response, send_file, redirect, url_for, render_template, session)
-import subprocess, os, json, time, threading
+import subprocess, os, json, time, threading, secrets
+from functools import wraps
 from datetime import timedelta
 from autoroam.common import get_repo_root, get_log_file_path, get_data_dir, get_failed_roams_dir, get_runs_dir
 from dotenv import load_dotenv
+
+API_KEY_FILE = os.path.join(os.path.dirname(__file__), "api_key.txt")
+
+# Try to load existing key, otherwise generate and save a new one
+if os.path.exists(API_KEY_FILE):
+    with open(API_KEY_FILE) as f:
+        API_KEY = f.read().strip()
+else:
+    API_KEY = secrets.token_urlsafe(32)
+    with open(API_KEY_FILE, "w") as f:
+        f.write(API_KEY)
+    print(f"[+] Generated new API key: {API_KEY}")
+    print("[!] Keep this safe – stored in api_key.txt")
 
 # Prefer .env, fallback to .env.example for new users
 if os.path.exists(".env"):
@@ -84,6 +98,23 @@ def enforce_login():
         return
     if not session.get("logged_in"):
         return redirect(url_for("login"))
+    
+@app.before_request
+def require_api_key_for_api():
+    # Only enforce on /api routes
+    if not request.path.startswith("/api/"):
+        return
+
+    # ✅ Allow logged-in web UI sessions
+    if session.get("logged_in"):
+        return
+
+    # ✅ Enforce for everything else (external use)
+    key = request.headers.get("X-API-Key")
+    if not key or key != API_KEY:
+        return jsonify({"error": "Unauthorized"}), 401
+
+
 
 @app.after_request
 def add_no_cache_headers(response):
@@ -309,7 +340,25 @@ def load_results():
 
 
 
-def run_server(port=8080):
-    """Run the Flask server on the specified port."""
-    print(f"Starting webserver at http://localhost:{port}")
-    app.run(host="0.0.0.0", port=port, debug=True)
+def run_server(port=8443):
+    """Run the Flask server with HTTPS using self-signed certs."""
+    cert_dir = os.path.join(os.path.dirname(__file__), "certs")
+    cert_path = os.path.join(cert_dir, "server.crt")
+    key_path  = os.path.join(cert_dir, "server.key")
+
+    if not os.path.exists(cert_path) or not os.path.exists(key_path):
+        print("[!] HTTPS certificate not found.")
+        print("    Generate one with:")
+        print("    openssl req -x509 -newkey rsa:4096 -keyout certs/server.key -out certs/server.crt -days 365 -nodes -subj '/CN=localhost'")
+        print("Falling back to HTTP.")
+        ssl_context = None
+    else:
+        ssl_context = (cert_path, key_path)
+        print(f"[✓] Using HTTPS certificate from {cert_dir}")
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=True,
+        ssl_context=ssl_context
+    )

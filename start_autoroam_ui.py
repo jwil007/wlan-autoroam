@@ -8,12 +8,12 @@ import sys, os
 repo_root = get_repo_root()
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
-    
+
 from webui.server.app import run_server
 
 def main():
     parser = argparse.ArgumentParser(description="Start the AutoRoam Web UI")
-    parser.add_argument("--port", "-p", type=int, default=8080, help="HTTP port (default: 8080)")
+    parser.add_argument("--port", "-p", type=int, default=8443, help="HTTP port (default: 8443)")
     args = parser.parse_args()
 
     run_server(port=args.port)

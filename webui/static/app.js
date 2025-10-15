@@ -403,6 +403,16 @@ const runBtn=document.getElementById('btnRunNow');
 const statusLabel=document.getElementById('runStatus');
 const downloadBtn=document.getElementById('btnDownloadLog');
 
+//Top bar logout button
+document.addEventListener("DOMContentLoaded", () => {
+  const logoutBtn = document.getElementById("btnLogout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      window.location.href = "/logout";
+    });
+  }
+});
+
 
 let roamInProgress=false;
 runBtn.addEventListener('click',async()=>{

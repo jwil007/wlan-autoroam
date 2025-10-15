@@ -1,3 +1,4 @@
+
 /* ======================
    THEME VARIABLES
 ====================== */
@@ -97,6 +98,69 @@ button:focus, .btn:focus {
 #roamsButtons {
   margin-bottom: 10px;   /* tweak 8–14px to taste */
 }
+
+/* ======================
+   TOP BAR 
+====================== */
+#topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+
+#topbar .topbar-inner {
+  max-width: 1200px;      
+  margin: 0 auto;
+  padding: 8px 20px;     
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Left side brand */
+#topbar .brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#topbar .logo {
+  width: 20px;
+  height: 20px;
+  opacity: 0.9;
+}
+
+#topbar .title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.4px;
+}
+
+/* Right side logout button */
+.btnLogout {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnLogout:hover {
+  background: var(--panel2);
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+
 /* ======================
    PANELS & SECTION HEADERS
 ====================== */

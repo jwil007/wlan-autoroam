@@ -2,3 +2,4 @@ __pycache__/
 .env
 data
 webui/server/roam_done.flag
+webui/server/api_key.txt
