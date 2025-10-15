@@ -10,19 +10,36 @@ This project uses native Linux tools (iw, wpa_cli, wpa_supplicant, and journalct
 * Log snippets for failed roams are automatically saved.
 * REST API (Beta)
 
-### Requirements:
-A Linux device with a Wi-Fi interface connected to an SSID. Python3, iw, wpa_cli, wpa_supplicant, and journalctl.
- > [!NOTE]
-> The iw scan command used may require elevated permissions. If you run into errors, try running the script with sudo, or edit your sudoers file to allow iw to be used without password.
 
+
+### Prerequisites
+This project is built around Linux Debian based distros. It uses iw, wpa_cli, and journalctl. You Linux client needs to have an active Wi-Fi interface connected to an SSID. Make a note of your interface name, which you can get with `ip link`.
+ > [!NOTE]
+> On some sytems, wpa_cli and iw require root. If you get errors, run the script with sudo.
+
+
+On recent Debian/Ubuntu systems, the system Python is *externally managed*, so dependencies must be installed in a virtual environment.
+
+#### Setup
+```bash
+# Install required tools
+sudo apt install python3-venv -y
+
+# Create and activate virtual environment
+python3 -m venv venv
+venv/bin/pip install -r requirements.txt
+
+# Run the app (requires root for iw / wpa_cli)
+sudo venv/bin/python start_autoroam_ui.py
+```
 # Usage
 ## Web UI:
 
 The UI is the only thing you need to run, as it has a Run Now button to kick off the roam cycle.
 1. Rename `.env.example` to `.env`.  replace placeholder WEB_USER and WEB_PASS values with your preferred username and password. Set FLASK_SECRET to any random string.
-2. Run startup script `python3 start_autoroam_ui.py`. This spins up HTTPS web server at localhost port 8443. If you want to change the port, use the `-p` flag - for example  `python3 start_autoroam_ui.py -p 10443`.
+2. Run startup script `sudo venv/bin/python3 start_autoroam_ui.py`. This spins up HTTPS web server at localhost port 8443. If you want to change the port, use the `-p` flag - for example  `python3 start_autoroam_ui.py -p 10443`.
 3. Log in at https://localhost:8443 (or whatever port you set).
-4. Kick off the roam cycle with the Run Now button.
+4. Set the iface and min_rssi params on the top right of the UI, or leave defaults `wlan0` and `-75`. Click Run Now to kick off the test.
   > [!NOTE]
 > The cert for HTTPS is self signed, so you will need to click through the browser warning. If you prefer to replace the certs, the files are `server.crt` and `server.key` in `webui/server/certs `.
 ### Saving and loading results
@@ -38,7 +55,7 @@ There is an experimental REST API. Swagger documentation is at https://<WEB_SERV
 To make API calls you need an X-API-Key header using the key stored in webui/server/api_key.txt.
 
 ## CLI:
-`python3 start_autoroam_cli.py`
+`sudo venv/bin/python3 start_autoroam_cli.py`
  
  #### Optional args:
  
