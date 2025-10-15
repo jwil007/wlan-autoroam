@@ -13,7 +13,7 @@ This project uses native Linux tools (iw, wpa_cli, wpa_supplicant, and journalct
 
 
 ### Prerequisites
-This project is built around Linux Debian based distros. It uses iw, wpa_cli, and journalctl. You Linux client needs to have an active Wi-Fi interface connected to an SSID. Make a note of your interface name, which you can get with `ip link`.
+This project is built around Linux Debian based distros. It uses iw, wpa_cli, and journalctl. Your Linux client needs to have an active Wi-Fi interface connected to an SSID. Make a note of your interface name, which you can get with `ip link`.
  > [!NOTE]
 > On some sytems, wpa_cli and iw require root. If you get errors, run the script with sudo.
 
