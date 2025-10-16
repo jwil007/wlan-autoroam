@@ -90,8 +90,8 @@ button:focus, .btn:focus {
 }
 
 #btnExpandAll, #btnCollapseAll {
-  font-size: 0.8em;
-  padding: 4px 10px;
+  font-size: 0.85em;
+  padding: 5px 10px;
   margin-left: 4px;
 }
 /* Adds space below the expand/collapse buttons row */
@@ -270,7 +270,7 @@ th{color:#a2bad6;font-weight:600;text-transform:uppercase;letter-spacing:.12em;f
 .rssi.yellow{color:#ffd86b}
 .rssi.red{color:#ff6c79}
 .pill{
-  display:inline-flex;gap:6px;align-items:center;border:1px solid var(--chipBorder);border-radius:999px;padding:4px 8px;background:#0b1219;font-size:12px
+  display:inline-flex;gap:6px;align-items:center;border:1px solid var(--chipBorder);border-radius:999px;padding:4px 8px;background:#0b1219;font-size:13px
 }
 .pill .dot{width:8px;height:8px;border-radius:999px;box-shadow:none}
 
@@ -387,8 +387,8 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield;}
   background:transparent;
   border:1px solid var(--line);
   color:var(--text);
-  font-size:0.8em;
-  padding:2px 8px;
+  font-size:0.9em;
+  padding:3px 8px;
   border-radius:6px;
   margin-left:8px;
   cursor:pointer;
