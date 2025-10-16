@@ -76,7 +76,12 @@ def parse_iw_scan_output(iw_output: str,
 
             elif "Authentication suites:" in line:
                 suites = line.split("Authentication suites:")[1].strip()
-                auth_suites.extend(suites.split())
+                # Replace "IEEE 802.1X" temporarily with a token to protect the space
+                temp = suites.replace("IEEE 802.1X", "IEEE_802.1X")
+                # Split on spaces
+                parts = temp.split()
+                # Restore original string
+                auth_suites.extend([p.replace("IEEE_802.1X", "IEEE 802.1X") for p in parts])
 
             elif "Capabilities:" in line and "PTKSA" in line:
                 if "MFP-required" in line:
