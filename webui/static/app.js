@@ -118,6 +118,58 @@ function renderTable() {
   }
 }
 
+// === Simple sortable table ===
+function makeTableSortable(tableId) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+
+  const headers = table.querySelectorAll("th");
+  headers.forEach((th, index) => {
+    th.style.cursor = "pointer";
+    th.addEventListener("click", () => sortTableByColumn(table, index));
+  });
+}
+
+function sortTableByColumn(table, columnIndex) {
+  const tbody = table.tBodies[0];
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  const header = table.tHead.rows[0].cells[columnIndex];
+
+  // Toggle sort direction
+  const currentDir = header.dataset.sortDir === "asc" ? "desc" : "asc";
+  header.dataset.sortDir = currentDir;
+
+  // Sort rows
+  const sortedRows = rows.sort((a, b) => {
+    const aText = a.cells[columnIndex].innerText.trim();
+    const bText = b.cells[columnIndex].innerText.trim();
+
+    // Try numeric comparison first
+    const aNum = parseFloat(aText.replace(/[^\d.-]/g, ""));
+    const bNum = parseFloat(bText.replace(/[^\d.-]/g, ""));
+    const bothNumeric = !isNaN(aNum) && !isNaN(bNum);
+
+    if (bothNumeric) {
+      return currentDir === "asc" ? aNum - bNum : bNum - aNum;
+    } else {
+      return currentDir === "asc"
+        ? aText.localeCompare(bText)
+        : bText.localeCompare(aText);
+    }
+  });
+
+  // Rebuild tbody
+  tbody.innerHTML = "";
+  sortedRows.forEach(row => tbody.appendChild(row));
+
+  // Optional: visually mark sorted column
+  table.querySelectorAll("th").forEach(th => th.classList.remove("sorted"));
+  header.classList.add("sorted");
+}
+
+// Activate sorting for your AP table
+makeTableSortable("apTable");
+
 /*** ==========================================================
      CHART (SVG stacked bars)
 ========================================================== */
