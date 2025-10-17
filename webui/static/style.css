@@ -274,6 +274,21 @@ th{color:#a2bad6;font-weight:600;text-transform:uppercase;letter-spacing:.12em;f
 }
 .pill .dot{width:8px;height:8px;border-radius:999px;box-shadow:none}
 
+
+/* Keep MFP pills on one line */
+#apTable th:nth-child(7),
+#apTable td:nth-child(7) {
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+td .pill {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* ======================
    ACCORDION
 ====================== */
