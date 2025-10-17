@@ -161,9 +161,9 @@ def find_raw_logs(logs: list[str]) -> LogAnalysisRaw:
         "roam_start_log":      (["nl80211: Authentication request send successfully",
                                  "CTRL_IFACE ROAM "], False),
         "roam_end_log":        (["CTRL-EVENT-CONNECTED"], False),
-        "roam_fail_log":       (["-> DISCONNECTED",
-                                 "No network configuration known",
+        "roam_fail_log":       (["No network configuration known",
                                  "Target AP not found from BSS table",
+                                 "-> DISCONNECTED"
                                  ], False),
         "auth_type_log":       (["* Auth Type"], False),
         "auth_err_logs":       (["CTRL-EVENT-AUTH-REJECT",re.compile(r"Authentication with ([0-9a-f]{2}:){5}[0-9a-f]{2} timed out", re.I),
