@@ -116,8 +116,20 @@ def api_docs() -> dict:
 # ──────────────────────────────────────────────────────────────
 # Run MCP server (HTTP transport)
 # ──────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    port = int(os.getenv("MCP_PORT", 8765))
+def run_mcp_server(port=8765, ui_port=8443):
+    """
+    Start the FastMCP server.
+    
+    Args:
+        port (int): Port for the MCP server
+        ui_port (int): Port where the UI server is running
+    """
+    global BASE_URL
+    BASE_URL = f"https://localhost:{ui_port}"
     print(f"[✓] FastMCP HTTP server listening on port {port}")
     print(f"    Connected to Flask API at {BASE_URL}")
     mcp.run(transport="http", host="0.0.0.0", port=port)
+
+if __name__ == "__main__":
+    port = int(os.getenv("MCP_PORT", 8765))
+    run_mcp_server(port=port)
