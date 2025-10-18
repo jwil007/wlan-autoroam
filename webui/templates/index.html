@@ -3,10 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="api-key" content="{{ api_key }}" />
   <title>wlan-autoroam UI</title>
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <!-- External stylesheet -->
  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+ <link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}">
 </head>
 
 <body>
@@ -19,6 +21,7 @@
 
       <div class="actions">
         <button id="btnDocs" class="btnDocs" onclick="window.open('/api/docs', '_blank')">API Docs (Beta)</button>
+        <button id="btnAISettings" class="btnDocs">AI Settings</button>
         <button id="btnLogout" class="btnLogout">Logout</button>
       </div>
     </div>
@@ -58,10 +61,26 @@
             style="background: var(--ok); color: var(--bg);">
             ▶ Run Now
           </button>
+          <button class="btnAnalyze" id="btnAnalyzeAI" style="margin-left:8px;">🤖 Analyze with AI</button>
           <span id="runStatus"
             style="color:var(--muted);font-size:0.9em;"></span>
         </div>
       </header>
+
+      <!-- AI Analysis Panel -->
+      <div class="panel ai-analysis-panel" style="display:none">
+        <div class="ai-header">
+          <h3>AI Analysis</h3>
+          <button class="btn-close-ai">×</button>
+        </div>
+        <div class="chat-container">
+          <div class="chat-messages"></div>
+          <div class="chat-input-container">
+            <textarea class="chat-input" placeholder="Ask a question about the roam data..."></textarea>
+            <button class="chat-send">Send</button>
+          </div>
+        </div>
+      </div>
 
       <!-- ===== Core report view ===== -->
       <section id="reportView">
@@ -129,6 +148,21 @@
         </div>
       </section>
 
+      <!-- AI Analysis Panel -->
+      <div class="panel ai-analysis-panel" style="display:none">
+        <div class="ai-header">
+          <h3>AI Analysis</h3>
+          <button class="btn-close-ai">×</button>
+        </div>
+        <div class="chat-container">
+          <div class="chat-messages"></div>
+          <div class="chat-input-container">
+            <textarea class="chat-input" placeholder="Ask a question about the roam data..."></textarea>
+            <button class="chat-send">Send</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Future expansion -->
       <section id="controlPanel" class="panel" style="display:none"></section>
     </main>
@@ -141,6 +175,43 @@
     <div class="modal-actions">
       <button id="confirmSave">Save</button>
       <button id="cancelSave">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="aiSettingsModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h3>AI Settings</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label>API Key (stored on this machine):</label>
+      <input id="aiApiKey" type="password" placeholder="sk-..." style="width:100%" />
+
+      <label>Model:</label>
+      <select id="aiModel" style="width:100%">
+        <option value="gpt-4o-mini">gpt-4o-mini</option>
+        <option value="gpt-4o">gpt-4o</option>
+        <option value="gpt-4">gpt-4</option>
+        <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+        <option value="custom">Custom...</option>
+      </select>
+      <label id="aiModelCustomLabel" style="display:none">Custom model:</label>
+      <input id="aiModelCustom" type="text" placeholder="enter custom model name" style="width:100%;display:none" />
+
+      <label>Provider endpoint (optional):</label>
+      <input id="aiEndpoint" type="text" placeholder="https://api.openai.com" style="width:100%" />
+      <label>Temperature:</label>
+      <input id="aiTemp" type="number" step="0.1" min="0" max="1" placeholder="0.2" />
+      <label>Max tokens:</label>
+      <input id="aiMaxTokens" type="number" placeholder="512" />
+
+      <div style="margin-top:.5em;display:flex;gap:.5em;align-items:center;">
+        <button id="aiTestBtn" class="btn">Test Connection</button>
+        <span id="aiTestResult" class="ai-test-result"></span>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:12px;">
+      <button id="saveAISettings">Save</button>
+      <button id="cancelAISettings">Cancel</button>
     </div>
   </div>
 </div>

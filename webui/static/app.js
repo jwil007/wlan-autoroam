@@ -36,6 +36,473 @@ const median = arr => {
 };
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
+// Basic Markdown renderer
+function renderMarkdown(text) {
+  if (!text) return '';
+  
+  // Basic Markdown parsing
+  return text
+    // Convert headers (##)
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    // Convert lists
+    .replace(/^\s*[\-\*]\s+(.*)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+    // Convert bold (**text**)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Convert italics (*text*)
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Convert line breaks
+    .replace(/\n/g, '<br>');
+}
+
+// Toggle AI Analysis Panel
+function toggleAIPanel(show) {
+  const panel = $('.ai-analysis-panel');
+  if (show === undefined) {
+    show = panel.style.display === 'none';
+  }
+  panel.style.display = show ? 'flex' : 'none';
+  
+  // Focus input when showing
+  if (show) {
+    $('.chat-input').focus();
+  }
+}
+
+/*** ==========================================================
+     AI INTEGRATION
+========================================================== */
+
+/*** ==========================================================
+     AI INTEGRATION
+========================================================== */
+// Setup AI Panel and Chat Functionality
+function setupAI() {
+  // Initialize chat panel elements
+  const aiPanel = $('.ai-analysis-panel');
+  const closeBtn = $('.btn-close-ai');
+  const analyzeBtn = $('#btnAnalyzeAI');
+  const chatInput = $('.chat-input');
+  const sendBtn = $('.chat-send');
+  const messagesContainer = $('.chat-messages');
+  let currentConversation = [];
+  let aiAnalysisInProgress = false;
+
+  // Show/hide panel handlers
+  analyzeBtn.addEventListener('click', async () => {
+    if (!data) {
+      alert('No data available to analyze');
+      return;
+    }
+
+    try {
+      // Show panel with loading state
+      toggleAIPanel(true);
+      aiAnalysisInProgress = true;
+
+      const res = await fetch('/api/analyze_with_ai', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-API-Key': document.querySelector('meta[name="api-key"]').content
+        },
+        body: JSON.stringify({
+          deep: false,
+          run_dir: data.run_dir
+        })
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json();
+
+      // Add initial analysis message
+      const analysisMsg = document.createElement('div');
+      analysisMsg.className = 'message assistant';
+      analysisMsg.innerHTML = renderMarkdown(result.ai.shallow);
+      messagesContainer.appendChild(analysisMsg);
+
+      // Save to conversation history
+      currentConversation.push({ role: 'assistant', content: result.ai.shallow });
+
+      // Focus input for follow-up
+      chatInput.focus();
+
+    } catch (err) {
+      console.error('AI analysis failed:', err);
+      const errorMsg = document.createElement('div');
+      errorMsg.className = 'message error';
+      errorMsg.textContent = 'Failed to get AI analysis. Please try again.';
+      messagesContainer.appendChild(errorMsg);
+    } finally {
+      aiAnalysisInProgress = false;
+    }
+  });
+
+  closeBtn.addEventListener('click', () => toggleAIPanel(false));
+
+  // Handle message sending
+  function sendMessage(text) {
+    if (!text.trim()) return;
+    
+    // Add user message
+    const userMsg = document.createElement('div');
+    userMsg.className = 'message user';
+    userMsg.textContent = text;
+    messagesContainer.appendChild(userMsg);
+    
+    // Save to conversation
+    currentConversation.push({ role: 'user', content: text });
+
+    // Show typing indicator
+    const typingIndicator = document.createElement('div');
+    typingIndicator.className = 'message assistant typing';
+    messagesContainer.appendChild(typingIndicator);
+
+    // Auto scroll
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    // Clear input
+    chatInput.value = '';
+    
+    // Send to backend
+    fetch('/api/chat_followup', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-API-Key': document.querySelector('meta[name="api-key"]').content
+      },
+      body: JSON.stringify({
+        question: text,
+        run_dir: data.run_dir
+      })
+    })
+    .then(res => res.json())
+    .then(response => {
+      // Remove typing indicator
+      messagesContainer.removeChild(typingIndicator);
+      
+      // Add AI response
+      const aiMsg = document.createElement('div');
+      aiMsg.className = 'message assistant';
+      aiMsg.innerHTML = renderMarkdown(response.answer);
+      messagesContainer.appendChild(aiMsg);
+      
+      // Save to conversation
+      currentConversation.push({ role: 'assistant', content: response.message });
+      
+      // Auto scroll
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    })
+    .catch(err => {
+      // Remove typing indicator
+      messagesContainer.removeChild(typingIndicator);
+      
+      // Show error message
+      const errorMsg = document.createElement('div');
+      errorMsg.className = 'message error';
+      errorMsg.textContent = 'Error: Could not get AI response. Please try again.';
+      messagesContainer.appendChild(errorMsg);
+    });
+  }
+
+  // Handle chat submission
+  sendBtn.addEventListener('click', () => sendMessage(chatInput.value));
+  chatInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(chatInput.value);
+    }
+  });
+}
+
+// AI Settings Modal handler
+function setupAISettings() {
+  const modal = $("#aiSettingsModal");
+  const btn = $("#btnAISettings");
+  const saveBtn = $("#saveAISettings");
+  const cancelBtn = $("#cancelAISettings");
+  const testBtn = $("#aiTestBtn");
+  const modelSelect = $("#aiModel");
+  const customModelInput = $("#aiModelCustom");
+  const customModelLabel = $("#aiModelCustomLabel");
+  const apiKeyInput = $("#aiApiKey");
+  const endpointInput = $("#aiEndpoint");
+  const tempInput = $("#aiTemp");
+  const maxTokensInput = $("#aiMaxTokens");
+  const testResult = $("#aiTestResult");
+
+  // Show/hide custom model input based on dropdown
+  modelSelect.addEventListener('change', () => {
+    const showCustom = modelSelect.value === 'custom';
+    customModelInput.style.display = showCustom ? 'block' : 'none';
+    customModelLabel.style.display = showCustom ? 'block' : 'none';
+  });
+
+  // Load saved settings when opening modal
+  btn.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/api/ai_settings');
+      const settings = await res.json();
+      
+      // Populate fields
+      apiKeyInput.value = settings.api_key || '';
+      endpointInput.value = settings.endpoint || '';
+      tempInput.value = settings.temperature || '0.2';
+      maxTokensInput.value = settings.max_tokens || '512';
+      
+      // Handle model selection
+      const savedModel = settings.model;
+      if (savedModel) {
+        const option = Array.from(modelSelect.options).find(opt => opt.value === savedModel);
+        if (option) {
+          modelSelect.value = savedModel;
+        } else {
+          modelSelect.value = 'custom';
+          customModelInput.value = savedModel;
+        }
+        modelSelect.dispatchEvent(new Event('change'));
+      }
+    } catch (e) {
+      console.error('Failed to load AI settings:', e);
+    }
+    modal.style.display = 'flex';
+  });
+
+  // Test connection
+  testBtn.addEventListener('click', async () => {
+    testBtn.disabled = true;
+    testResult.textContent = 'Testing...';
+    testResult.className = 'ai-test-result';
+
+    try {
+      const settings = {
+        api_key: apiKeyInput.value,
+        endpoint: endpointInput.value,
+        model: modelSelect.value === 'custom' ? customModelInput.value : modelSelect.value,
+        temperature: parseFloat(tempInput.value || '0.2'),
+        max_tokens: parseInt(maxTokensInput.value || '512', 10)
+      };
+
+      const res = await fetch('/api/ai_test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      const result = await res.json();
+      
+      if (result.ok) {
+        testResult.textContent = '✓ Connection successful';
+        testResult.className = 'ai-test-result success';
+      } else {
+        testResult.textContent = `❌ ${result.error}`;
+        testResult.className = 'ai-test-result error';
+        console.error('Test details:', result.details);
+      }
+    } catch (e) {
+      testResult.textContent = '❌ Connection failed';
+      testResult.className = 'ai-test-result error';
+      console.error(e);
+    }
+    testBtn.disabled = false;
+  });
+
+  // Save settings
+  saveBtn.addEventListener('click', async () => {
+    const settings = {
+      api_key: apiKeyInput.value,
+      endpoint: endpointInput.value,
+      model: modelSelect.value === 'custom' ? customModelInput.value : modelSelect.value,
+      temperature: parseFloat(tempInput.value || '0.2'),
+      max_tokens: parseInt(maxTokensInput.value || '512', 10)
+    };
+
+    try {
+      await fetch('/api/ai_settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      modal.style.display = 'none';
+    } catch (e) {
+      console.error('Failed to save AI settings:', e);
+      alert('Failed to save settings. Please try again.');
+    }
+  });
+
+  // Close modal
+  cancelBtn.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+  
+  // Close on outside click
+  window.addEventListener('click', e => {
+    if (e.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+}
+
+// AI Analysis Modal & Logic
+async function showAIAnalysis() {
+  const overlay = $("#overlay");
+  const spinnerText = $("#spinnerText");
+  
+  if (!data) {
+    alert('No data available to analyze');
+    return;
+  }
+
+  try {
+    overlay.style.display = 'flex';
+    spinnerText.textContent = 'Running AI analysis...';
+
+    // Get current run directory from data state
+    const currentRunDir = data.run_dir;
+    
+    const res = await fetch('/api/analyze_with_ai', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-API-Key': document.querySelector('meta[name="api-key"]').content
+      },
+      body: JSON.stringify({
+        deep: false,
+        run_dir: currentRunDir // Pass the current run's directory to analyze
+      })
+    });
+    
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const result = await res.json();
+
+    // Create and show modal
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content ai-modal">
+        <h3>AI Analysis</h3>
+        <div class="chat-container">
+          <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+              ${renderMarkdown(result.ai.shallow)}
+            </div>
+          </div>
+          <div class="chat-input-container">
+            <textarea id="chatInput" placeholder="Ask a follow-up question..." rows="2"></textarea>
+            <button id="sendChat">Send</button>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button onclick="this.closest('.modal').remove()">Close</button>
+        </div>
+      </div>
+    `;
+    
+    // Set up chat handlers
+    const chatInput = modal.querySelector("#chatInput");
+    const sendButton = modal.querySelector("#sendChat");
+    const messagesContainer = modal.querySelector("#chatMessages");
+    
+    async function sendChatMessage() {
+      const question = chatInput.value.trim();
+      if (!question) return;
+      
+      // Add user message to chat
+      const userDiv = document.createElement('div');
+      userDiv.className = 'message user';
+      userDiv.textContent = question;
+      messagesContainer.appendChild(userDiv);
+      
+      // Clear input
+      chatInput.value = '';
+      
+      try {
+        // Show typing indicator
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'message assistant typing';
+        loadingDiv.textContent = 'Thinking...';
+        messagesContainer.appendChild(loadingDiv);
+        
+        // Send to backend
+        const res = await fetch('/api/chat_followup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': document.querySelector('meta[name="api-key"]').content
+          },
+          body: JSON.stringify({
+            question,
+            run_dir: data.run_dir
+          })
+        });
+        
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const response = await res.json();
+        
+        // Remove typing indicator
+        loadingDiv.remove();
+        
+        // Add assistant response
+        const assistantDiv = document.createElement('div');
+        assistantDiv.className = 'message assistant';
+        assistantDiv.innerHTML = renderMarkdown(response.answer);
+        messagesContainer.appendChild(assistantDiv);
+        
+        // Scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      } catch (e) {
+        console.error('Chat failed:', e);
+        alert('Failed to send message. Please try again.');
+      }
+    }
+    
+    // Send on Enter (but Shift+Enter for new line)
+    chatInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+      }
+    });
+    
+    sendButton.addEventListener('click', sendChatMessage);
+
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+
+    // Close on outside click
+    modal.addEventListener('click', e => {
+      if (e.target === modal) modal.remove();
+    });
+
+  } catch (e) {
+    console.error('AI analysis failed:', e);
+    if (!await checkAIConfigured()) {
+      alert('Please configure your AI settings first (API key and endpoint) before running analysis.');
+      $("#btnAISettings").click();
+    } else {
+      alert('Analysis failed. Check the browser console for details and verify your API key is valid.');
+    }
+  } finally {
+    overlay.style.display = 'none';
+  }
+}
+
+// Helper to check if AI is configured
+async function checkAIConfigured() {
+  try {
+    const res = await fetch('/api/ai_settings', {
+      headers: {
+        'X-API-Key': document.querySelector('meta[name="api-key"]').content
+      }
+    });
+    const settings = await res.json();
+    return !!(settings.api_key && settings.endpoint);
+  } catch (e) {
+    console.error('Failed to check AI settings:', e);
+    return false;
+  }
+}
 /*** ==========================================================
      MAIN RENDER PIPELINE
 ========================================================== */
@@ -47,6 +514,15 @@ function loadData(d) {
   renderChart();
   renderRoams();
 }
+
+// Initialize everything
+document.addEventListener('DOMContentLoaded', () => {
+  setupAISettings();
+  setupAI();  // Initialize AI panel and chat functionality
+  
+  // We don't need this anymore since we're using the panel
+  // $("#btnAnalyzeAI").addEventListener('click', showAIAnalysis);
+});
 
 /*** ==========================================================
      HEADER / SUMMARY METRICS
@@ -632,8 +1108,14 @@ async function pollForSummary() {
 ========================================================== */
 function renderCycleSummary(summary) {
   console.log("Rendering new roam data:", summary);
-  window.data = summary;
-  loadData(summary);
+  // Update global data state
+  data = summary;
+  // Update UI
+  renderHeader();
+  renderMetrics();
+  renderTable();
+  renderChart();
+  renderRoams();
 }
 
 /*** ==========================================================

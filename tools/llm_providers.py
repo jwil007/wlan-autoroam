@@ -64,6 +64,14 @@ def call_provider(messages: List[Dict[str, str]],
     Returns: { text, raw, usage, capabilities }
     """
     cfg = provider_config or load_config()
+    
+    # Handle prefixed overrides (_llm_api_key -> api_key)
+    if cfg:
+        prefixed = {k: v for k, v in cfg.items() if k.startswith('_llm_')}
+        for k, v in prefixed.items():
+            unprefixed = k[5:]  # remove '_llm_'
+            cfg[unprefixed] = v
+    
     model = model or cfg.get("model")
     temperature = temperature if temperature is not None else cfg.get("temperature")
     max_tokens = max_tokens or cfg.get("max_tokens")

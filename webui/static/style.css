@@ -99,6 +99,105 @@ button:focus, .btn:focus {
   margin-bottom: 10px;   /* tweak 8–14px to taste */
 }
 
+/* AI Integration Styles */
+.btnAnalyze {
+  background: linear-gradient(180deg,#1c3874,#142a5c);
+  border: 1px solid #2d4b8c;
+  border-bottom-color: #1e325e;
+  color: #e6f0ff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btnAnalyze:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(28,70,200,0.24);
+}
+
+/* AI Modal Styles */
+.ai-modal .ai-content {
+  background: var(--panel2);
+  padding: 16px;
+  border-radius: 8px;
+  margin: 12px 0;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.ai-test-result {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+
+.ai-test-result.success {
+  background: var(--ok);
+  color: var(--bg);
+}
+
+.ai-test-result.error {
+  background: var(--bad);
+  color: var(--text);
+}
+
+/* Modal base styles */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: var(--panel);
+  padding: 24px;
+  border-radius: var(--radius);
+  min-width: 400px;
+  max-width: 800px;
+  box-shadow: var(--shadow);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Form elements in modals */
+.modal .modal-content input[type="text"],
+.modal .modal-content input[type="password"],
+.modal .modal-content input[type="number"],
+.modal .modal-content select {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 6px;
+  width: 100%;
+  margin: 4px 0 12px;
+}
+
+.modal .modal-content input:focus,
+.modal .modal-content select:focus {
+  border-color: var(--ok);
+  outline: none;
+}
+
+.modal .modal-content label {
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
 /* ======================
    TOP BAR 
 ====================== */
@@ -188,6 +287,119 @@ button:focus, .btn:focus {
   border-color: var(--ok);
   color: var(--ok);
 }
+
+/* Analyze with AI button (accent) */
+.btnAnalyze {
+  background: linear-gradient(180deg,#2a6bff,#1f4ee6);
+  border: 1px solid rgba(20,60,160,0.6);
+  color: white;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(28,70,200,0.18);
+}
+.btnAnalyze:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(28,70,200,0.24); }
+
+/* AI Modal */
+.ai-modal {
+  width: 1100px;
+  max-width: calc(100vw - 48px);
+  max-height: 86vh;
+  background: linear-gradient(180deg,#08121a,#0b1620);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+  overflow:auto;
+  color: var(--text);
+  border: 1px solid rgba(50,80,120,0.25);
+}
+.ai-modal h4 { margin: 0 0 8px 0; color: #cfe0ff }
+.ai-modal .section { margin-bottom: 14px; }
+.ai-modal .finding { border-left: 3px solid rgba(255,255,255,0.04); padding: 10px 12px; margin-bottom: 10px; background: rgba(255,255,255,0.015); border-radius:8px }
+.ai-modal .evidence { font-family: monospace; background: #071018; padding:8px; border-radius:6px; border:1px solid var(--line); color:#d9eaff; max-height:140px; overflow:auto }
+.ai-modal .remediation { background: linear-gradient(90deg,#07131a,#081821); padding:10px;border-radius:8px;border:1px solid rgba(30,50,80,0.2); }
+/* Make inputs/selects inside modal follow theme (dark bg, white text) */
+.modal .modal-content input[type="text"],
+.modal .modal-content input[type="password"],
+.modal .modal-content input[type="number"],
+.modal .modal-content select,
+.modal .modal-content textarea {
+  background: var(--panel2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  border-radius: 8px;
+  outline: none;
+}
+.modal .modal-content select { appearance: none; -moz-appearance: none; -webkit-appearance: none; }
+.modal .modal-content input::placeholder, .modal .modal-content textarea::placeholder { color: var(--muted); }
+.modal .modal-content label { color: var(--text); font-weight:600; }
+
+/* AI test result classes */
+.ai-test-result.ok { color: var(--ok); font-weight:700; }
+.ai-test-result.fail { color: var(--bad); font-weight:700; }
+
+/* Test details pre box */
+#aiTestDetails {
+  font-family: monospace;
+  color: var(--text);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  padding: 8px;
+  border-radius: 6px;
+  margin-top: 6px;
+}
+/* Keep long error lines from expanding the viewport */
+#aiTestDetails {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  white-space: pre-wrap;     /* wrap long lines */
+  word-break: break-word;   /* break long tokens */
+  overflow: auto;           /* scroll when content overflows */
+}
+
+/* Also ensure any pre inside the AI modal is constrained */
+.ai-modal pre, .ai-modal .evidence {
+  box-sizing: border-box;
+  max-width: 100%;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+}
+
+/* Rendered markdown inside AI modal */
+.ai-modal .ai-markdown h1, .ai-modal .ai-markdown h2, .ai-modal .ai-markdown h3,
+.ai-modal .ai-markdown h4, .ai-modal .ai-markdown h5, .ai-modal .ai-markdown h6 {
+  color: #cfe0ff; margin: 8px 0 6px 0;
+}
+.ai-modal .ai-markdown p { margin: 6px 0; color: var(--text); }
+.ai-modal .ai-markdown ul, .ai-modal .ai-markdown ol { margin: 6px 0 6px 18px; }
+.ai-modal .ai-markdown code { background: rgba(255,255,255,0.03); padding: 2px 6px; border-radius: 4px; }
+.ai-modal .ai-markdown pre { background: #071018; padding: 10px; border-radius: 6px; border: 1px solid var(--line); color: #d9eaff; overflow:auto; }
+.ai-modal .ai-markdown a { color: #9cc8ff; }
+
+/* Make overlay content center and ensure ai-modal looks good on small screens */
+#overlay { align-items: center; justify-content: center; padding: 24px; }
+.ai-modal { box-shadow: 0 40px 80px rgba(0,0,0,0.7); }
+/* AI settings test result */
+.ai-test-result{margin-left:8px;color:var(--muted);font-weight:600}
+
+/* =====================
+  AI Structured Cards
+  ===================== */
+.ai-structured { display:flex;flex-direction:column;gap:12px;margin-top:8px }
+.ai-findings-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:12px }
+.ai-card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.04); padding:12px; border-radius:10px }
+.ai-card h3 { margin:0 0 6px 0; font-size:15px; color:#e6f6ff }
+.ai-severity { font-weight:700; font-size:12px; margin-bottom:8px }
+.ai-severity.low { color: var(--ok); }
+.ai-severity.medium { color: var(--warn); }
+.ai-severity.high { color: var(--bad); }
+.ai-card .evidence { margin-top:8px; font-family:monospace; font-size:13px; background: #061018; padding:8px; border-radius:8px; border:1px solid var(--line) }
+.ai-card .ai-hypothesis { margin-top:8px; color:var(--muted) }
+.ai-card .ai-remediation { margin-top:8px; background: linear-gradient(90deg,#07131a,#081821); padding:10px;border-radius:8px;border:1px solid rgba(30,50,80,0.2); }
+
 /* ======================
    PANELS & SECTION HEADERS
 ====================== */

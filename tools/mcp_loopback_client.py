@@ -253,7 +253,7 @@ def analyze_summary(j: dict):
     print(nl)
 
 
-def generate_nl_summary(data: dict, failures: list, slow_roams: list, phase_issues: list, extra_context: dict = None) -> str:
+def generate_nl_summary(data: dict, failures: list, slow_roams: list, phase_issues: list, extra_context: dict = None, llm_overrides: dict = None) -> str:
     """Produce a short human-readable paragraph summarizing the run. This function
     is intentionally small so an LLM backend can be optionally used to rephrase.
     """
@@ -273,6 +273,10 @@ def generate_nl_summary(data: dict, failures: list, slow_roams: list, phase_issu
     ctx = dict(data)
     if extra_context:
         ctx["_extra"] = extra_context
+    # Inject per-call LLM overrides into top-level context (e.g. _llm_api_key, _llm_model)
+    if llm_overrides and isinstance(llm_overrides, dict):
+        for k, v in llm_overrides.items():
+            ctx[k] = v
     llm_text = try_llm_rephrase(text, ctx)
     return llm_text or text
 
@@ -287,11 +291,13 @@ def try_llm_rephrase(text: str, data: dict) -> Optional[str]:
     try:
         return adapter.rephrase(text, data)
     except Exception as e:
-        print(f"LLM adapter call failed: {e}")
-        return None
+        # Surface the error to the caller so it can be shown in the UI
+        err = f"(LLM adapter call failed: {e})"
+        print(err)
+        return err
 
 
-def download_failed_from_summary(j: dict, out_dir: str = "./") -> dict:
+def download_failed_from_summary(j: dict, out_dir: str = "./", limit_lines: int = None) -> dict:
     """Download any failure log filenames referenced in the summary and save locally.
 
     Returns a dict mapping filename -> text_contents for inclusion in prompts.
@@ -316,7 +322,18 @@ def download_failed_from_summary(j: dict, out_dir: str = "./") -> dict:
                     text = content.decode('utf-8', errors='replace')
                 except Exception:
                     text = str(content)
-                fetched[fname] = text
+                # Truncate for LLM context if requested, but keep full file on disk
+                if limit_lines and isinstance(text, str):
+                    lines = text.splitlines()
+                    if len(lines) > limit_lines:
+                        tail = lines[-limit_lines:]
+                        truncated = "\n".join(tail)
+                        truncated = f"[TRUNCATED: last {limit_lines} lines]\n" + truncated
+                        fetched[fname] = truncated
+                    else:
+                        fetched[fname] = text
+                else:
+                    fetched[fname] = text
     return fetched
 
 
@@ -337,6 +354,7 @@ def main():
     parser.add_argument("--analyze", action="store_true", help="Run a lightweight analysis on the latest summary")
     parser.add_argument("--download-failed", action="store_true", help="Download any failed roam logs referenced in the latest summary")
     parser.add_argument("--deep", action="store_true", help="Include raw failure logs in the LLM prompt (may increase token usage)")
+    parser.add_argument("--deep-limit", type=int, default=1000, help="When --deep is used, include only the last N lines of each failure log (default: 1000)")
 
     args = parser.parse_args()
 
@@ -375,9 +393,14 @@ def main():
                             analyze_summary(j)
                             # If deep, call LLM with extra context
                             if args.deep:
-                                # regenerate NL summary with extra context
+                                # regenerate NL summary with extra context and explicit deep mode
                                 data = j.get("data") or {}
+                                # attach downloaded logs under _extra and set _mode to 'deep' so adapters can detect
+                                ctx = dict(data)
+                                ctx["_extra"] = extra or {}
+                                ctx["_mode"] = "deep"
                                 nl = generate_nl_summary(data, [], [], [], extra_context=extra)
+                                # Note: try_llm_rephrase will send the context through to the adapter; we ensure deep detection
                                 print("\nDeep NL summary:\n")
                                 print(nl)
                 time.sleep(args.loop)
@@ -392,10 +415,13 @@ def main():
                             extra = download_failed_from_summary(j)
                         analyze_summary(j)
                         if args.deep:
-                            data = j.get("data") or {}
-                            nl = generate_nl_summary(data, [], [], [], extra_context=extra)
-                            print("\nDeep NL summary:\n")
-                            print(nl)
+                           data = j.get("data") or {}
+                           ctx = dict(data)
+                           ctx["_extra"] = extra or {}
+                           ctx["_mode"] = "deep"
+                           nl = generate_nl_summary(data, [], [], [], extra_context=extra)
+                           print("\nDeep NL summary:\n")
+                           print(nl)
     except KeyboardInterrupt:
         print('\nExiting...')
 
