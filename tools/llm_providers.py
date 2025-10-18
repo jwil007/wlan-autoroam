@@ -29,9 +29,9 @@ def load_config() -> Dict[str, Any]:
         "type": _env("LLM_PROVIDER_TYPE", "openai_compatible"),
         "endpoint": _env("LLM_PROVIDER_ENDPOINT", "https://api.openai.com"),
         "api_key": _env("LLM_API_KEY", _env("OPENAI_API_KEY")),
-        "model": _env("LLM_MODEL", "gpt-4o-mini"),
+        "model": _env("LLM_MODEL", "gpt-3.5-turbo-16k"),  # Default to model with large context window
         "temperature": float(_env("LLM_TEMPERATURE", "0.2")),
-        "max_tokens": int(_env("LLM_MAX_TOKENS", "512")),
+        "max_tokens": int(_env("LLM_MAX_TOKENS", "16000")),  # Default to large context window
     }
 
 
@@ -89,7 +89,19 @@ def call_provider(messages: List[Dict[str, str]],
 
     # Currently default to OpenAI-compatible REST
     try:
-        resp_json = _call_openai_compatible(cfg.get("endpoint"), cfg.get("api_key"), payload)
+        resp = requests.post(
+            cfg.get("endpoint").rstrip('/') + "/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {cfg.get('api_key')}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=60
+        )
+        if resp.status_code != 200:
+            error_detail = resp.text[:1000] if resp.text else "No error details"
+            raise RuntimeError(f"Provider HTTP {resp.status_code}: {error_detail}")
+        resp_json = resp.json()
     except Exception as e:
         # bubble up with context
         raise RuntimeError(f"Provider call failed: {e}")

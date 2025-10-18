@@ -490,13 +490,12 @@ def chat_followup():
                 out_dir=os.path.join(get_repo_root(), 'webui', 'server')
             )
             
-        # Add question context to summary data
+        print(f"\n[DEBUG] summary_data keys: {summary_data.keys()}")
+        print(f"[DEBUG] candidates in summary: {len(summary_data.get('candidates', []))}")
+        
+        # Add question context to summary data - pass the raw summary data
         context = {
-            'data': summary_data,  # Full cycle summary data
-            'roams': summary_data.get('roams', []),  # Individual roam attempts
-            'candidate_aps': summary_data.get('candidate_aps', []),  # All candidate APs with RSSI
-            'security_type': summary_data.get('security_type'),
-            'ssid': summary_data.get('ssid'),
+            'data': summary_data,  # Pass the complete raw data
             '_question': question,  # The user's question
             '_context_type': 'chat_followup'  # Help LLM understand this is a chat context
         }
