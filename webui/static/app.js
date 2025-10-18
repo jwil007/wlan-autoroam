@@ -188,17 +188,30 @@ function setupAI() {
     chatInput.value = '';
     
     // Send to backend
-    fetch('/api/chat_followup', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-API-Key': document.querySelector('meta[name="api-key"]').content
-      },
-      body: JSON.stringify({
-        question: text,
-        run_dir: data.run_dir
+    fetch('/api/latest_cycle_summary')
+      .then(res => res.json())
+      .then(summary => {
+        // Try to get run_dir from multiple possible locations
+        const runDir = (data && data.run_dir) || 
+                      (summary.data && summary.data.run_dir) || 
+                      summary.run_dir;
+        
+        if (!runDir) {
+          throw new Error('No run directory available');
+        }
+
+        return fetch('/api/chat_followup', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-API-Key': document.querySelector('meta[name="api-key"]').content
+          },
+          body: JSON.stringify({
+            question: text,
+            run_dir: runDir
+          })
+        });
       })
-    })
     .then(res => res.json())
     .then(response => {
       // Remove typing indicator
