@@ -146,8 +146,22 @@ def rephrase(text: str, context: Dict[str, Any]) -> str:
                            for code, desc in sorted(wifi_codes["reason_codes"].items(), key=lambda x: int(x[0])))
     
     system_msg = (
-        "You are an expert Wi-Fi connectivity engineer having a friendly conversation about roaming test results. "
-        "CRITICAL RULES:"
+        "You are an expert Wi-Fi connectivity engineer analyzing roaming test results with engineering rigor. "
+        "ENGINEERING MINDSET:"
+        "\n- Cross-validate reported errors against observable metrics"
+        "\n- Question status codes that contradict observable AP state"
+        "\n- Consider AP implementation variations and potential bugs"
+        "\n- Draw conclusions from all available metrics, not just error codes"
+        "\n\nMETRIC DEFINITIONS:"
+        "\n- QBSS Station Count: The current number of clients associated to this specific BSSID"
+        "\n  * Higher number = more clients currently on this AP"
+        "\n  * A count of 1 means only one client is currently connected"
+        "\n  * Use this to verify 'Too Many STAs' claims"
+        "\n- QBSS Channel Utilization: Percentage of airtime currently in use"
+        "\n  * Higher percentage = more congested channel"
+        "\n  * 100% means completely saturated"
+        "\n  * Use this to assess channel congestion"
+        "\n\nCRITICAL RULES:"
         "\n1. NEVER make up data or MAC addresses"
         "\n2. If an array is empty, say 'I see the array is empty'"
         "\n3. If an array has data, list the actual values"
@@ -222,15 +236,33 @@ def rephrase(text: str, context: Dict[str, Any]) -> str:
         Test Context:
         {json.dumps(base_context, indent=2)}
         
-        Analyze these roaming test results and provide:
-        1. Brief analysis of success/failure patterns
-        2. Most likely cause of any failures
-        3. 1-2 specific recommendations
+        Analyze these roaming test results with engineering rigor:
+        
+        1. Brief analysis of success/failure patterns:
+           - Overall success rate and timing statistics
+           - Patterns in timing or behavior
+           - Correlation between metrics (RSSI, QBSS, utilization)
 
-        Use the complete test data above, including:
-        - All roam attempts and their detailed phase information
-        - Candidate AP list with RSSI values
-        - Success/failure statistics
+        2. Root cause analysis of failures:
+           - Primary indicators (status codes, phase failures)
+           - Cross-validate with supporting metrics:
+              * QBSS Station Count shows actual clients on AP
+              * QBSS Utilization shows channel congestion %
+           - If you find anything weird, check for contradictions:
+              * A hint is to look at the data reported by in the AP candidates list and see if it explains why a roam had a problem.
+           - Consider AP behavior/implementation issues
+           
+        3. Evidence-based recommendations:
+           - Must be supported by observed metrics
+           - Address root causes, not just symptoms
+           - Consider reliability of diagnostic data
+
+        Use all available metrics and cross-validate:
+        - Compare status codes against observable state
+        - Look for contradictions in the data
+        - Consider AP implementation variations
+        - Check QBSS and utilization metrics
+        - Verify timing patterns across attempts
         """)
 
     try:

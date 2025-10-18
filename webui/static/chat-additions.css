@@ -1,0 +1,124 @@
+/* Header styling */
+.ai-header {
+  display: flex;
+  justify-content: center !important;
+  align-items: center;
+  padding: 8px;
+  background: var(--bg-light);
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--border);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ai-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+/* Collapse button styling */
+.btn-collapse-ai {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-collapse-ai:hover {
+  background: var(--bg-lighter);
+  border-color: var(--text);
+}
+
+/* Scrollbar styling */
+.chat-messages {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Send button styling */
+.chat-input-container {
+  position: relative;
+  display: flex;
+  gap: 8px;
+}
+
+.chat-send-button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.chat-send-button:hover {
+  background: var(--accent-hover, #4a8eff);
+  transform: translateY(-1px);
+}
+
+.chat-send-button:active {
+  transform: translateY(0px);
+}
+
+.chat-send-button::after {
+  content: '↗';
+  font-size: 16px;
+}
+
+/* Loading animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.ai-analysis-panel.loading .chat-messages::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--border);
+  border-top: 3px solid var(--text);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  z-index: 100;
+}

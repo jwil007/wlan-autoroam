@@ -90,6 +90,16 @@ function setupAI() {
   let currentConversation = [];
   let aiAnalysisInProgress = false;
 
+  // Panel state handlers
+  const panel = document.querySelector('.ai-analysis-panel');
+  const collapseBtn = document.querySelector('.btn-collapse-ai');
+  
+  collapseBtn.addEventListener('click', () => {
+    panel.classList.toggle('collapsed');
+    collapseBtn.textContent = panel.classList.contains('collapsed') ? '⌄' : '⌃';
+    collapseBtn.title = panel.classList.contains('collapsed') ? 'Expand' : 'Collapse';
+  });
+
   // Show/hide panel handlers
   analyzeBtn.addEventListener('click', async () => {
     if (!data) {
@@ -98,9 +108,18 @@ function setupAI() {
     }
 
     try {
-      // Show panel with loading state
+      // Reset conversation and show panel with loading state
+      currentConversation = [];
+      panel.classList.remove('collapsed');
+      collapseBtn.textContent = '⌃';
       toggleAIPanel(true);
       aiAnalysisInProgress = true;
+      panel.classList.add('loading');
+      
+      // Clear existing chat messages and input
+      const chatMessages = document.querySelector('.chat-messages');
+      if (chatMessages) chatMessages.innerHTML = '';
+      if (chatInput) chatInput.value = '';
 
       const res = await fetch('/api/analyze_with_ai', {
         method: 'POST',
@@ -126,7 +145,9 @@ function setupAI() {
       // Save to conversation history
       currentConversation.push({ role: 'assistant', content: result.ai.shallow });
 
-      // Focus input for follow-up
+      // Update UI state
+      panel.classList.remove('loading');
+      chatInput.value = '';
       chatInput.focus();
 
     } catch (err) {
